@@ -27,7 +27,7 @@ void no_newline(char **string);
 int main() {
 	FILE *in_file;
 	CHUNK *dff; //Data from file
-	int count = 0; //Data chunks count.
+	unsigned int count = 0; //Data chunks count.
 
 	in_file = get_file();
 	read_file(in_file, &dff, &count);
@@ -56,10 +56,14 @@ uint16_t crc16(const uint8_t *data_p, unsigned int length) {
 	return crc;
 }
 
-
-void read_file(FILE *file, CHUNK **data_array, int *count) {
+//*count != actual size
+//Because you are increasing count when we still haven't tried to read past the end. -> You are reallocating space for that, but nothing is there. Correct?
+//*count == index
+//
+void read_file(FILE *file, CHUNK **data_array, unsigned int *count) {
 	*data_array = (CHUNK *)malloc(sizeof(CHUNK));
 	int i = 0;
+	*count = 1;
 
 	if (*data_array == NULL) {
 		return;
@@ -68,19 +72,30 @@ void read_file(FILE *file, CHUNK **data_array, int *count) {
 	data_array[0][0].size = 0;
 
 	while (!feof(file) && !ferror(file)) {
-		if (i < CHUNK_SIZE) {
-			fread(&data_array[0][*count].data[i], 1, 1, file);
+		if (i < CHUNK_SIZE && fread(&data_array[0][(*count) - 1].data[i], 1, 1, file) == 1) {
 			i++;
-			data_array[0][*count].size++;
+			data_array[0][(*count) - 1].size++;
 		}
-		else {
+		else if (i >= CHUNK_SIZE){
+			CHUNK *temp_data_chunk;
+
 			(*count)++;
 			i = 0;
-			*data_array = (CHUNK *)realloc(*data_array, ((*count) + 1) * sizeof(CHUNK));
-			if (*data_array == NULL) {
-				return NULL;
+			temp_data_chunk = (CHUNK *)realloc(*data_array, (*count) * sizeof(CHUNK));
+			if (temp_data_chunk == NULL) {
+				return *data_array;
 			}
-			data_array[0][*count].size = 0;
+			data_array = &temp_data_chunk;
+			data_array[0][(*count) - 1].size = 0;
+		}
+		else { //Since reading returned 0 on the last chunk -> right ammount of data was given in the file. 
+			CHUNK *temp_data_chunk;
+
+			(*count)--;
+			temp_data_chunk = (CHUNK *)realloc(*data_array, (*count) * sizeof(CHUNK));
+			if (temp_data_chunk == NULL) {
+				return *data_array;
+			}
 		}
 	}
 }
