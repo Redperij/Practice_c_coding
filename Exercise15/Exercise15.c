@@ -30,7 +30,7 @@ bool ask_usr_cont();
 
 int main() {
 	FILE *in_file;
-	CHUNK *dff; //Data from file
+	CHUNK *dff = NULL; //Data from file
 	unsigned int count = 0; //Data chunks count.
 	unsigned int chunk_size = 0;
 	bool cont = true; //Continues execution of the programm
@@ -67,12 +67,13 @@ int main() {
 			printf("%d (%d byte): %x\n", i + 1, dff[i].size, dff[i].crc);
 		}
 
-		free(dff);
-
 		cont = ask_usr_cont(); //Asks user to continue or stop the programm.
 	}
 	
 	printf("Stopping execution.\n");
+	if (dff != NULL) {
+		free(dff);
+	}
 	return 0;
 }
 
