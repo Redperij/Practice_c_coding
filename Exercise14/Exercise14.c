@@ -32,8 +32,8 @@ int main() {
 	in_file = get_file();
 	read_file(in_file, &dff, &count);
 
-	for (int i = 0; i <= count; i++) {
-		printf("%d (%d byte):", i, dff[i].size);
+	for (int i = 0; i < count; i++) {
+		printf("%d (%d byte):", i + 1, dff[i].size);
 		for (int q = 0; q < dff[i].size; q++) {
 			
 			printf("%x ", dff[i].data[q]);
@@ -56,10 +56,7 @@ uint16_t crc16(const uint8_t *data_p, unsigned int length) {
 	return crc;
 }
 
-//*count != actual size
-//Because you are increasing count when we still haven't tried to read past the end. -> You are reallocating space for that, but nothing is there. Correct?
-//*count == index
-//
+//EASY
 void read_file(FILE *file, CHUNK **data_array, unsigned int *count) {
 	*data_array = (CHUNK *)malloc(sizeof(CHUNK));
 	int i = 0;
@@ -85,10 +82,10 @@ void read_file(FILE *file, CHUNK **data_array, unsigned int *count) {
 			if (temp_data_chunk == NULL) {
 				return *data_array;
 			}
-			data_array = &temp_data_chunk;
+			*data_array = temp_data_chunk;
 			data_array[0][(*count) - 1].size = 0;
 		}
-		else { //Since reading returned 0 on the last chunk -> right ammount of data was given in the file. 
+		else if (i == 0) { //Since reading returned 0 on the last chunk and there was no more data -> right ammount of data was given in the file. 
 			CHUNK *temp_data_chunk;
 
 			(*count)--;
@@ -96,6 +93,7 @@ void read_file(FILE *file, CHUNK **data_array, unsigned int *count) {
 			if (temp_data_chunk == NULL) {
 				return *data_array;
 			}
+			*data_array = temp_data_chunk;
 		}
 	}
 }
