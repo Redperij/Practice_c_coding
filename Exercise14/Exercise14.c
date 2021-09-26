@@ -17,8 +17,8 @@ typedef struct chunk {
 
 //CRC-calculation
 uint16_t crc16(const uint8_t *data_p, unsigned int length);
-
-void read_file(FILE *file, CHUNK **data_array, int *count);
+//Reads file with data writing it by bytes into the data_array. One chunk of data equals chunk_size bytes. Counts number of chunks with data.
+void read_file(FILE *file, CHUNK **data_array, unsigned int *count, const unsigned int chunk_size);
 //Gets the file from the user. (Accepts names with whitespaces)
 FILE *get_file();
 //Gets rid of the newline characters in the string.
@@ -29,10 +29,16 @@ int main() {
 	CHUNK *dff; //Data from file
 	unsigned int count = 0; //Data chunks count.
 
-	in_file = get_file();
-	read_file(in_file, &dff, &count);
+	in_file = get_file(); //Getting opened file.
+	read_file(in_file, &dff, &count, CHUNK_SIZE); //Reading all data chunks.
+	fclose(in_file);
 
-	for (int i = 0; i < count; i++) {
+	if (dff == NULL) { //If reading returned null pointer, then the file was empty or memory allocation failed.
+		return 1;
+	}
+
+	//DEBUG_PRINT
+	for (unsigned int i = 0; i < count; i++) {
 		printf("%d (%d byte):", i + 1, dff[i].size);
 		for (int q = 0; q < dff[i].size; q++) {
 			
@@ -40,7 +46,20 @@ int main() {
 		}
 		printf("\n");
 	}
+	//DEBUG_PRINT
 	
+	//Calculating checksums.
+	for (unsigned int i = 0; i < count; i++) {
+		dff[i].crc = crc16(&dff[i].data, dff[i].size);
+	}
+
+	printf("\nChecksum calculation:\n");
+	for (unsigned int i = 0; i < count; i++) {
+		printf("%d (%d byte): %x\n", i + 1, dff[i].size, dff[i].crc);
+	}
+
+	free(dff);
+
 	return 0;
 }
 
@@ -56,11 +75,11 @@ uint16_t crc16(const uint8_t *data_p, unsigned int length) {
 	return crc;
 }
 
-//EASY
-void read_file(FILE *file, CHUNK **data_array, unsigned int *count) {
-	*data_array = (CHUNK *)malloc(sizeof(CHUNK));
-	int i = 0;
-	*count = 1;
+//Reads file with data writing it by bytes into the data_array. One chunk of data equals chunk_size bytes. Counts number of chunks with data.
+void read_file(FILE *file, CHUNK **data_array, unsigned int *count, const unsigned int chunk_size) {
+	*data_array = (CHUNK *)malloc(sizeof(CHUNK)); //Allocating memory for the first chunk.
+	unsigned int i = 0; //Used to read file byte by byte.
+	*count = 1; //Counts number of chunks.
 
 	if (*data_array == NULL) {
 		return;
@@ -68,31 +87,44 @@ void read_file(FILE *file, CHUNK **data_array, unsigned int *count) {
 
 	data_array[0][0].size = 0;
 
+	//Loop through the whole file slowly reading it byte by byte.
 	while (!feof(file) && !ferror(file)) {
-		if (i < CHUNK_SIZE && fread(&data_array[0][(*count) - 1].data[i], 1, 1, file) == 1) {
-			i++;
-			data_array[0][(*count) - 1].size++;
+		//We are reding data chunk until it haven't reached specified size.
+		if (i < chunk_size && fread(&data_array[0][(*count) - 1].data[i], 1, 1, file) == 1) {
+			i++; //Increase byte to be read,
+			data_array[0][(*count) - 1].size++; //Size is one byte bigger.
 		}
-		else if (i >= CHUNK_SIZE){
-			CHUNK *temp_data_chunk;
+		//Reached chunk size. Reallocating space for another chunk.
+		else if (i >= chunk_size){
+			CHUNK *temp_data_chunk; //Temporary pointer to the array of data chunks.
 
-			(*count)++;
-			i = 0;
-			temp_data_chunk = (CHUNK *)realloc(*data_array, (*count) * sizeof(CHUNK));
-			if (temp_data_chunk == NULL) {
-				return *data_array;
+			(*count)++; //Number of chunks increases.
+			i = 0; //Bytes are zeroed.
+			temp_data_chunk = (CHUNK *)realloc(*data_array, (*count) * sizeof(CHUNK)); //Reallocating space for additional data chunk
+			if (temp_data_chunk == NULL) { //Realloc can fail, it is critical mistake -> return with the ammount of data we already have.
+				(*count)--; //Was unable to increase count.
+				return;
 			}
+			//Reallocated space -> get the correct pointer back.
 			*data_array = temp_data_chunk;
-			data_array[0][(*count) - 1].size = 0;
+			data_array[0][(*count) - 1].size = 0; //Size of the new chunk is zero.
 		}
-		else if (i == 0) { //Since reading returned 0 on the last chunk and there was no more data -> right ammount of data was given in the file. 
-			CHUNK *temp_data_chunk;
+		//Since reading returned 0 on the last chunk and there was no more data -> right ammount of data was given in the file or it was empty.
+		else if (i == 0) {
+			CHUNK *temp_data_chunk; //Temporary pointer to the array of data chunks.
 
-			(*count)--;
-			temp_data_chunk = (CHUNK *)realloc(*data_array, (*count) * sizeof(CHUNK));
+			(*count)--; //It is important to match allocated space in memory with actual number of chunks collected.
+			temp_data_chunk = (CHUNK *)realloc(*data_array, (*count) * sizeof(CHUNK)); //Reallocating space for the whole array of data chunks. (Shrinking it)
+		
+			//Either realloc failed or the file was empty. In any case, it is critical mistake -> exit function.
 			if (temp_data_chunk == NULL) {
-				return *data_array;
+				//If file was empty, we want to return NULL pointer. Realloc already made sure to free up the space.
+				if (*count == 0) {
+					*data_array = NULL;
+				}
+				return;
 			}
+			//Realloc successful -> get correct pointer back. 
 			*data_array = temp_data_chunk;
 		}
 	}
@@ -110,7 +142,7 @@ FILE *get_file() {
 
 	file = fopen(filename, "rb");
 	while (file == NULL) { //Requesting user to give correct filename.
-		printf("\nNo such file found, please enter the name again: ");
+		printf("\nNo such file found. Enter the name again\nPlease, enter the name of the file: ");
 		fgets(filename, MAX_FILENAME, stdin);
 		no_newline(&filename);
 		file = fopen(filename, "rb");
