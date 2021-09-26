@@ -37,23 +37,12 @@ int main() {
 		return 1;
 	}
 
-	//DEBUG_PRINT
-	for (unsigned int i = 0; i < count; i++) {
-		printf("%d (%d byte):", i + 1, dff[i].size);
-		for (int q = 0; q < dff[i].size; q++) {
-			
-			printf("%x ", dff[i].data[q]);
-		}
-		printf("\n");
-	}
-	//DEBUG_PRINT
-	
 	//Calculating checksums.
 	for (unsigned int i = 0; i < count; i++) {
 		dff[i].crc = crc16(&dff[i].data, dff[i].size);
 	}
 
-	printf("\nChecksum calculation:\n");
+	printf("\nList of checksums:\n");
 	for (unsigned int i = 0; i < count; i++) {
 		printf("%d (%d byte): %x\n", i + 1, dff[i].size, dff[i].crc);
 	}
