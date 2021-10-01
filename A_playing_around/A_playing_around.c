@@ -1,21 +1,31 @@
 #pragma warning(disable:4996) //disabling warning
 
 /*
-Write a program that reads input lines using read_line-function. read_line returns true if input was read and false when input ends.
-Each line contains two numbers and a command "add", "sub", "mul", or "div".
-Program reads lines one by one and checks that input is valid (first 2 integers then a string that is a valid command).
-If line is not properly formatted the program prints the line and displays an error message.
-For each properly formatted line the program prints out a calculation which is determined by the command.
+Assume following declarations and definitions:
 
-For example input that contains:
-7 2 sub
-43 -3 add
+#define MAX_LEN 32
 
-Will make the program print:
-7 - 2 = 5
-43 + -3 = 40
+typedef struct student_ {
+	char name[MAX_LEN];
+	int group;
+	int id;
+	struct student_ *next;
+} student;
 
-If the input can't be parsed then program must print the invalid line and an error message that describes the location of the error. See the example solution output for details.
+int move(student **source, int group, student **target);
+
+
+Implement function move() that moves elements from source to target.
+Second parameter, group, determines which elements to move.
+Only the elements of matching group are moved to target list.
+Both source and target are linked lists that are initialized by the caller.
+The end of list is market by setting next pointer of the last element to NULL.
+
+When you remove elements from the source you must preserve the order of remaining elements.
+When you add an element to the target it must be added at the beginning of the traget list.
+
+Move returns the number of elements moved to the target.
+Function returns zero if no matching elements were found.
 */
 
 #include <stdio.h>
@@ -26,136 +36,155 @@ If the input can't be parsed then program must print the invalid line and an err
 
 #define FILENAME "in.txt"
 
-/* call this function to read input */
-bool read_line(char *line, size_t size, FILE *file);
+#define MAX_LEN 32
 
-#define CHARS_IN_LINE 32
-#define ADDITION "add"
-#define SUBTRACTION "sub"
-#define MULTIPLICATION "mul"
-#define DIVISION "div"
+typedef struct student_ {
+	char name[MAX_LEN];
+	int group;
+	int id;
+	struct student_ *next;
+} student;
 
-//Returns number, indicating place of error or 0.
-int validate_input(const char *line, int *first_int, int *second_int, int *command, char **raw_command);
-//Creates new line if the input is correct.
-void print_new_line(char *line, int first_int, int second_int, int command);
-//Gets rid of the newline characters in the string. Terminates string on the first newline character.
-void no_newline(char **string);
+int move(student **source, int group, student **target);
+
 int main() {
-	FILE *file = fopen(FILENAME, "r"); //NOPE. DELETE THIS LINE! (just for checks)
-	char *line = malloc(CHARS_IN_LINE * sizeof(char)); //Line to read.
-	bool flag = true; //flag to continue.
-	int first_int; //First integer from input.
-	int second_int; //Second integer from input.
-	int command; //1 - add, 2 - sub, 3 - mul, 4 - div
-	int error_check = 0; //Flag to chack error.
-	char *invalid_command = malloc(CHARS_IN_LINE * sizeof(char)); //In case of failure this command will be displaied.
+	student *save_me = malloc(10 * sizeof(student));
+	student *target = malloc(10 * sizeof(student));
 
-	while(flag) {
-		flag = read_line(line, CHARS_IN_LINE, file); //ATTENTION!!!!!!! DELETE 'file' ARGUMENT. It is not needed in the task. (just for checks)
-		if (flag) {
-			//printf("%s\n", line);
-			error_check = validate_input(line, &first_int, &second_int, &command, &invalid_command);
-			switch (error_check)
-			{
-			case 1: //First argument invalid.
-			case 2: //Second argument invalid.
-			case 3: //Third argument invalid.
-				no_newline(&line);
-				printf("Input: \"%s\" Invalid argument in position: %d\n", line, error_check);
-				break;
-			case 4: //Unknown command.
-				no_newline(&line);
-				printf("Input: \"%s\" Unknown command: %s\n", line, invalid_command);
-				break;
-			default: //Everything in order.
-				no_newline(&line);
-				print_new_line(line, first_int, second_int, command);
-				break;
+	//source
+	save_me[0].name[0] = 'a';
+	save_me[0].name[1] = '\0';
+	save_me[0].group = 1;
+	save_me[0].id = 1;
+	save_me[0].next = &save_me[1];
+
+	save_me[1].name[0] = 'b';
+	save_me[1].name[1] = '\0';
+	save_me[1].group = 2;
+	save_me[1].id = 2;
+	save_me[1].next = &save_me[2];
+
+	save_me[2].name[0] = 'c';
+	save_me[2].name[1] = '\0';
+	save_me[2].group = 1;
+	save_me[2].id = 3;
+	save_me[2].next = &save_me[3];
+
+	save_me[3].name[0] = 'd';
+	save_me[3].name[1] = '\0';
+	save_me[3].group = 1;
+	save_me[3].id = 4;
+	save_me[3].next = &save_me[4];
+
+	save_me[4].name[0] = 'e';
+	save_me[4].name[1] = '\0';
+	save_me[4].group = 1;
+	save_me[4].id = 5;
+	save_me[4].next = NULL;
+
+	//target
+	target[0].name[0] = 'f';
+	target[0].name[1] = '\0';
+	target[0].group = 1;
+	target[0].id = 6;
+	target[0].next = &target[1];
+
+	target[1].name[0] = 'g';
+	target[1].name[1] = '\0';
+	target[1].group = 3;
+	target[1].id = 7;
+	target[1].next = NULL;
+
+	int i = 0;
+	int finish = 2;
+	printf("Source before move():\n");
+	while (finish) {
+		if (finish == 2) {
+			finish = 2;
+		}
+		printf("%d: (group %d) %s\n", save_me[i].id, save_me[i].group, save_me[i].name);
+		i++;
+		if ((save_me[i].next) == NULL || finish == 1) {
+			finish--;
+		}
+	}
+
+	i = 0;
+	finish = 2;
+	printf("Target before move():\n");
+	while (finish){
+		if (finish == 2) {
+			finish = 2;
+		}
+		printf("%d: (group %d) %s\n", target[i].id, target[i].group, target[i].name);
+		i++;
+		if ((target[i].next) == NULL || finish == 1) {
+			finish--;
+		}
+	}
+
+	move(&save_me, 1, &target);
+
+	i = 0;
+	finish = 2;
+	printf("Source after move():\n");
+	while (finish) {
+		if (finish == 2) {
+			finish = 2;
+		}
+		printf("%d: (group %d) %s\n", save_me[i].id, save_me[i].group, save_me[i].name);
+		i++;
+		if ((save_me[i].next) == NULL || finish == 1) {
+			finish--;
+		}
+	}
+
+	i = 0;
+	finish = 2;
+	printf("Target after move():\n");
+	while (finish) {
+		if (finish == 2) {
+			finish = 2;
+		}
+		printf("%d: (group %d) %s\n", target[i].id, target[i].group, target[i].name);
+		i++;
+		if ((target[i].next) == NULL || finish == 1) {
+			finish--;
+		}
+	}
+
+	return 0;
+}
+
+
+
+int move(student **source, int group, student **target) {
+	int count = 0;
+	student **check = source;
+	student *pprev = NULL;
+
+	while (*check != NULL) {
+		if ((*check)->group == group) {
+			if (pprev == NULL) {
+				student **ppnext = target;
+				target = source;
+				source = &((*source)->next);
+				check = source; //Moving checking pointer.
+				(*target)->next = *ppnext; //CHANGING THE POINTER ITSELF - WRONG
 			}
+			else {
+				student **ppnext = target;
+				target = check;
+				pprev->next = (*check)->next;
+				(*target)->next = *ppnext;
+			}
+
+		}
+		else {
+			pprev = *check; //Remembering last pointer from source.
+			check = &((*check)->next); //Moving checking pointer.
 		}
 	}
-
-	return 0;
-}
-
-//Returns number, indicating place of error or 0.
-int validate_input(const char *line, int *first_int, int *second_int, int *command, char **raw_command) {
-	int error_flag = 0;
-
-	error_flag = sscanf(line, "%d %d %s", first_int, second_int, *raw_command);
-	switch (error_flag)
-	{
-	case 0:
-		return 1;
-	case 1:
-		return 2;
-	case 2:
-		return 3;
-	default:
-		break;
-	}
-
-	if (!strcmp(*raw_command, ADDITION)) {
-		*command = 1;
-	}
-	else if (!strcmp(*raw_command, SUBTRACTION)) {
-		*command = 2;
-	}
-	else if (!strcmp(*raw_command, MULTIPLICATION)) {
-		*command = 3;
-	}
-	else if (!strcmp(*raw_command, DIVISION)) {
-		*command = 4;
-	}
-	else {
-		return 4;
-	}
-
-	return 0;
-}
-
-//Creates new line if the input is correct.
-void print_new_line(char *line, int first_int, int second_int, int command) {
-	int result;
-	switch (command)
-	{
-	case 1: // +
-		result = first_int + second_int;
-		printf("%d + %d = %d\n", first_int, second_int, result);
-		break;
-	case 2: // -
-		result = first_int - second_int;
-		printf("%d - %d = %d\n", first_int, second_int, result);
-		break;
-	case 3: // *
-		result = first_int * second_int;
-		printf("%d * %d = %d\n", first_int, second_int, result);
-		break;
-	case 4: // /
-		result = first_int / second_int;
-		printf("%d / %d = %d\n", first_int, second_int, result);
-		break;
-	default:
-		//What?
-		break;
-	}
-}
-
-//Gets rid of the newline characters in the string. Terminates string on the first newline character.
-void no_newline(char **string) {
-	for (unsigned int i = 0; i < strlen(*string); i++) {
-		if (string[0][i] == '\n') {
-			string[0][i] = '\0';
-		}
-	}
-}
-
-bool read_line (char *line, size_t size, FILE *file){
-	char *return_value;
-	return_value = fgets(line, size, file);
-	if(return_value != NULL) {
-		return true;
-	}
-	return false;
+	
+	return count;
 }
