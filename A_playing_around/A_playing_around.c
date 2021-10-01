@@ -78,7 +78,7 @@ int main() {
 
 	save_me[4].name[0] = 'e';
 	save_me[4].name[1] = '\0';
-	save_me[4].group = 1;
+	save_me[4].group = 3;
 	save_me[4].id = 5;
 	save_me[4].next = NULL;
 
@@ -123,7 +123,8 @@ int main() {
 		}
 	}
 
-	move(&save_me, 1, &target);
+	int count = 0;
+	count = move(&save_me, 1, &target);
 
 	student **ppts = &save_me;
 	printf("Source after move():\n");
@@ -139,6 +140,8 @@ int main() {
 		ppts = &((*ppts)->next);
 	}
 
+	printf("Elements moved: %d", count);
+
 	return 0;
 }
 
@@ -146,22 +149,20 @@ int main() {
 
 int move(student **source, int group, student **target) {
 	int count = 0;
-	student **temp_source = source;
-	student **temp_target = target;
 
-	while (*temp_source != NULL) {
-		if ((*temp_source)->group == group) {
+	while (*source != NULL) {
+		if ((*source)->group == group) {
 			//Erasing pointer from source.
-			student *ptm = *temp_source;
-			*temp_source = ptm->next;
-			//Adding pointer to the target
-			ptm->next = *temp_target;
-			*temp_target = ptm;
+			student *ptm = *source; //Remember current pointer.
+			*source = ptm->next; //Move source to next element.
+			//Adding pointer to the target.
+			ptm->next = *target; //Next pointer for remembered pointer is target list.
+			*target = ptm; //Target list starts from remembered pointer.
 
-			count++;
+			count++; //Increase count of moved elements.
 		}
 		else {
-			temp_source = &(*temp_source)->next;
+			source = &(*source)->next; //Move source to next element.
 		}
 	}
 
