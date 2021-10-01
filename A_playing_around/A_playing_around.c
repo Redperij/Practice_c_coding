@@ -125,32 +125,18 @@ int main() {
 
 	move(&save_me, 1, &target);
 
-	i = 0;
-	finish = 2;
+	student **ppts = &save_me;
 	printf("Source after move():\n");
-	while (finish) {
-		if (finish == 2) {
-			finish = 2;
-		}
-		printf("%d: (group %d) %s\n", save_me[i].id, save_me[i].group, save_me[i].name);
-		i++;
-		if ((save_me[i].next) == NULL || finish == 1) {
-			finish--;
-		}
+	while (*ppts != NULL) {
+		printf("%d: (group %d) %s\n", (*ppts)->id, (*ppts)->group, (*ppts)->name);
+		ppts = &((*ppts)->next);
 	}
 
-	i = 0;
-	finish = 2;
+	ppts = &target;
 	printf("Target after move():\n");
-	while (finish) {
-		if (finish == 2) {
-			finish = 2;
-		}
-		printf("%d: (group %d) %s\n", target[i].id, target[i].group, target[i].name);
-		i++;
-		if ((target[i].next) == NULL || finish == 1) {
-			finish--;
-		}
+	while (*ppts != NULL) {
+		printf("%d: (group %d) %s\n", (*ppts)->id, (*ppts)->group, (*ppts)->name);
+		ppts = &((*ppts)->next);
 	}
 
 	return 0;
@@ -160,31 +146,24 @@ int main() {
 
 int move(student **source, int group, student **target) {
 	int count = 0;
-	student **check = source;
-	student *pprev = NULL;
+	student **temp_source = source;
+	student **temp_target = target;
 
-	while (*check != NULL) {
-		if ((*check)->group == group) {
-			if (pprev == NULL) {
-				student **ppnext = target;
-				target = source;
-				source = &((*source)->next);
-				check = source; //Moving checking pointer.
-				(*target)->next = *ppnext; //CHANGING THE POINTER ITSELF - WRONG
-			}
-			else {
-				student **ppnext = target;
-				target = check;
-				pprev->next = (*check)->next;
-				(*target)->next = *ppnext;
-			}
+	while (*temp_source != NULL) {
+		if ((*temp_source)->group == group) {
+			//Erasing pointer from source.
+			student *ptm = *temp_source;
+			*temp_source = ptm->next;
+			//Adding pointer to the target
+			ptm->next = *temp_target;
+			*temp_target = ptm;
 
+			count++;
 		}
 		else {
-			pprev = *check; //Remembering last pointer from source.
-			check = &((*check)->next); //Moving checking pointer.
+			temp_source = &(*temp_source)->next;
 		}
 	}
-	
+
 	return count;
 }
