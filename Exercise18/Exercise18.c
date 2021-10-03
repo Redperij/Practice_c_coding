@@ -7,6 +7,7 @@
 #include <string.h>
 
 #define FILENAME "listofcars.txt"
+#define MAX_FILENAME 255
 
 //Holds data in binary format in file.
 typedef struct car_ {
@@ -40,6 +41,22 @@ int add_new_car_to_file(const char *filename, const car *car);
 * Prints menu on the console screen.
 */
 void print_menu();
+/*
+* Gets the file from the user. (Accepts names with whitespaces)
+*/
+void get_filename(char **filename);
+/*
+*
+*/
+int parse_simple_json(const char *filename, car **cars);
+/*
+* Clears out all '\n' from the string.
+*/
+void clear_newlines(char **string);
+/*
+* Reads specified file to string.
+*/
+void read_file_to_string(FILE *file, char **string);
 
 int main() {
 	car *new_car = NULL; //Holds new car to add to the file.
@@ -103,6 +120,7 @@ int main() {
 			}
 			break;
 		case 3:
+			parse_simple_json("to_add.json", &cars);
 			break;
 		case 4: //Quit the program.
 			printf("\n**********************************************************\n");
@@ -426,4 +444,109 @@ void print_menu() {
 |4 - Quit the program.               |\n\
 --------------------------------------\n\
 Enter the number of command: ");
+}
+
+//Gets the filename from the user. (Accepts names with whitespaces)
+void get_filename(char **filename) {
+	*filename = (char *)malloc(MAX_FILENAME * sizeof(char));
+	FILE *file = NULL;
+	int length = 0;
+
+	printf("Please, enter the name of the file: ");
+	fgets(*filename, MAX_FILENAME, stdin);
+	clear_newlines(filename);
+
+	if (strlen(*filename) == 0) { //Mistake with newline is possible. Just throwing in another fgets not to be confused by random error. (If everything is in order, size won't be 0)
+		fgets(*filename, MAX_FILENAME, stdin);
+		clear_newlines(filename);
+	}
+
+	file = fopen(*filename, "rb");
+	while (file == NULL) { //Requesting user to give correct filename.
+		printf("\nNo such file found. Enter the name again\nPlease, enter the name of the file: ");
+		fgets(*filename, MAX_FILENAME, stdin);
+		clear_newlines(filename);
+		file = fopen(*filename, "rb");
+	}
+	rewind(file); //Returning to the start.
+	fclose(file); //Closing the file.
+}
+
+/*
+* 
+*/
+int parse_simple_json(const char *filename, car **cars) {
+	FILE *file = NULL;
+	int count = 0;
+	char *raw_input = NULL;
+
+	file = fopen(filename, "r");
+	//Unable to find file -> escape.
+	if (file == NULL) {
+		return -2;
+	}
+
+	read_file_to_string(file, &raw_input); //Getting raw json string.
+	fclose(file);
+
+	clear_newlines(&raw_input); //Getting json string without any newlines.
+	
+
+
+	return count;
+}
+
+/*
+* Clears out all '\n' from the string.
+*/
+void clear_newlines(char **string) {
+	if (*string == NULL) return; //String doesn't exist -> escape.
+
+	int i = 0;
+	int w = strlen(*string);
+	for (i = 0; i < w; i++) {
+		if (string[0][i] == '\n' || string[0][i] == '\r') {
+			for (int q = i + 1; q <= w; q++) {
+				string[0][q - 1] = string[0][q];
+			}
+			w--;
+		}
+	}
+}
+
+void read_file_to_string(FILE *file, char **string) {
+	int i = 0; //Number of iterations.
+	char input; //Char from input
+
+	//Initializing string.
+	if (*string != NULL) {
+		free(*string);
+		*string = NULL;
+	}
+	*string = (char *)malloc((i + 1) * sizeof(char));
+	//malloc() failed or no file given -> escape.
+	if (*string == NULL || file == NULL) {
+		return;
+	}
+
+	do {
+		input = getc(file);
+		if (!feof(file) && !ferror(file)) {
+			i++;
+			char *temp_string = realloc(*string, (i + 1) * sizeof(char));
+			if (temp_string == NULL) { //realloc() failed -> escaping.
+				if (i == 1) { //Realloc failed on the first char -> string must be empty.
+					free(*string);
+					*string = NULL;
+				}
+				return;
+			}
+			else {
+				*string = temp_string; //Getting correct pointer.
+				string[0][i - 1] = input; //Writing input char to the string.
+			}
+		}
+	} while (!feof(file) && !ferror(file));
+
+	string[0][i] = '\0'; //Terminating string.
 }
