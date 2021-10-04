@@ -495,6 +495,7 @@ int get_cars(const char *filename, car **cars) {
 	FILE *file = NULL; //File to read cars from.
 	int count = 0; //Car count.
 	char *raw_input = NULL; //String with whole file.
+	char *object_string = NULL;
 
 	file = fopen(filename, "r");
 	//Unable to find file -> escape.
@@ -512,6 +513,8 @@ int get_cars(const char *filename, car **cars) {
 	if (*cars == NULL) {
 		*cars = malloc(sizeof(car));
 	}
+
+	get_obj_str(&object_string, &raw_input);
 
 //	while (raw_input != NULL) {
 		//flag = get_obj_str(&object_string, raw_input); //by { and }
@@ -534,8 +537,36 @@ int get_cars(const char *filename, car **cars) {
 * Returns false on failure and true on success.
 */
 bool get_obj_str(char **object_string, char **string) {
+	if (*string == NULL) return; //String doesn't exist -> escape.
+	char *start = NULL;
+	char *end = NULL;
 
-	return false;
+	if (*object_string != NULL) {
+		free(*object_string);
+		*object_string = NULL;
+	}
+
+	//Rewrite loop
+	for (int i = 0; i < strlen(*string); i++) {
+		if (string[0][i] == '{') {
+			start = &string[0][i];
+		}
+		if (string[0][i] == '}') {
+			end = &string[0][i];
+		}
+		if (start != NULL && end != NULL) break;
+	}
+	if (start == NULL || end == NULL) {
+		return false;
+	}
+	printf("From start to { : %d\n", start - (*string));
+	printf("Size of object: %d\n", end - start);
+	printf("From start to } : %d\n", end - (*string));
+	printf("string[0][start - (*string)] = %c\n", string[0][start - (*string)]);
+	printf("string[0][end - start] = %c\n", string[0][end - start - 1]);
+	printf("string[0][end - (*string)] = %c\n", string[0][end - (*string)]);
+
+	return true;
 }
 
 /*
