@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #define FILENAME "listofcars.txt"
 #define MAX_FILENAME 255
@@ -48,7 +49,7 @@ void get_filename(char **filename);
 /*
 *
 */
-int parse_simple_json(const char *filename, car **cars);
+int get_cars(const char *filename, car **cars);
 /*
 * Clears out all '\n' from the string.
 */
@@ -57,6 +58,8 @@ void clear_newlines(char **string);
 * Reads specified file to string.
 */
 void read_file_to_string(FILE *file, char **string);
+
+void clean_json_string(char **string);
 
 int main() {
 	car *new_car = NULL; //Holds new car to add to the file.
@@ -120,7 +123,7 @@ int main() {
 			}
 			break;
 		case 3:
-			parse_simple_json("to_add.json", &cars);
+			get_cars("to_add.json", &cars);
 			break;
 		case 4: //Quit the program.
 			printf("\n**********************************************************\n");
@@ -475,10 +478,12 @@ void get_filename(char **filename) {
 /*
 * 
 */
-int parse_simple_json(const char *filename, car **cars) {
+int get_cars(const char *filename, car **cars) {
 	FILE *file = NULL;
 	int count = 0;
 	char *raw_input = NULL;
+	bool array_scope = false;
+	bool object_scope = false;
 
 	file = fopen(filename, "r");
 	//Unable to find file -> escape.
@@ -489,8 +494,9 @@ int parse_simple_json(const char *filename, car **cars) {
 	read_file_to_string(file, &raw_input); //Getting raw json string.
 	fclose(file);
 
-	clear_newlines(&raw_input); //Getting json string without any newlines.
-	
+	clean_json_string(&raw_input); //Getting clean json string.
+	printf("String:\n%s\n", raw_input); //Debug
+
 
 
 	return count;
@@ -510,6 +516,7 @@ void clear_newlines(char **string) {
 				string[0][q - 1] = string[0][q];
 			}
 			w--;
+			i--;
 		}
 	}
 }
@@ -549,4 +556,32 @@ void read_file_to_string(FILE *file, char **string) {
 	} while (!feof(file) && !ferror(file));
 
 	string[0][i] = '\0'; //Terminating string.
+}
+
+void clean_json_string(char **string) {
+	//Being safe.
+	if (*string == NULL) return;
+
+	bool var_scope = false; //Flag to check whether whitespace is located inside the variable scope. (We don't want to ruin the names)
+	int i = 0;
+	int w = strlen(*string);
+	for (i = 0; i < w; i++) {
+		//Clear all whitespaces outside the variable scopes.
+		if (isspace(string[0][i]) && !var_scope) {
+			for (int q = i + 1; q <= w; q++) {
+				string[0][q - 1] = string[0][q];
+			}
+			w--;
+			i--;
+		}
+		//It is '"' -> flip variable scope.
+		else if (string[0][i] == '"') {
+			if (var_scope) {
+				var_scope = false;
+			}
+			else {
+				var_scope = true;
+			}
+		}
+	}
 }
