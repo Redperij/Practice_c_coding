@@ -51,6 +51,19 @@ void get_filename(char **filename);
 */
 int get_cars(const char *filename, car **cars);
 /*
+* Removes object_string from string. Takes out one scope of {}.
+* In simple words moves one {object} from string to object_string.
+* Returns false on failure and true on success.
+*/
+bool get_obj_str(char **object_string, char **string);
+/*
+* Gets car from object_string.
+* Fails in case of lack of variables. Must get '{"make":"string","model":"string","price":int,"emission":float}' in any order.
+* car_obj is a mess in case of failure, so it must be handled outside.
+* Returns false on failure and true on success.
+*/
+bool get_car_from_obj_str(const char *object_string, car *car_obj);
+/*
 * Clears out all '\n' from the string.
 */
 void clear_newlines(char **string);
@@ -247,7 +260,7 @@ int read_string(char **string) {
 		input = getc(stdin);
 		if (input != '\n') {
 			i++;
-			char *temp_string = realloc(*string, (i + 1) * sizeof(char));
+			char *temp_string = realloc(*string, ((size_t)i + 1) * sizeof(char));
 			if (temp_string == NULL) { //realloc() failed -> escaping.
 				if (i == 1) { //Realloc failed on the first char -> string must be empty.
 					free(*string);
@@ -314,7 +327,7 @@ int get_cars_from_file(const char *filename, car **cars) {
 			*prev_byte = 0; //Previous byte is reset to 0
 			//Loop until the delimiter while collecting data. If the file will end, well, it can end in a very unexpected way.
 			while (!(*prev_byte == 92 && *byte == 59) && !feof(file)) { //!(prev_byte == '\\' && byte == ';') (in the file: "\;" or "5c 3b")
-				uint8_t *temp_data = realloc(data, (i + 1) * sizeof(uint8_t));
+				uint8_t *temp_data = realloc(data, ((size_t)i + 1) * sizeof(uint8_t));
 
 				//realloc() failed -> escape.
 				if (temp_data == NULL) {
@@ -361,7 +374,7 @@ int get_cars_from_file(const char *filename, car **cars) {
 
 				//Add memory for another car.
 				ncars++;
-				car *temp_cars = realloc(*cars, (ncars + 1) * sizeof(car));
+				car *temp_cars = realloc(*cars, ((size_t)ncars + 1) * sizeof(car));
 				//realloc() failed -> escape.
 				if (temp_cars == NULL) {
 					return -1;
@@ -479,11 +492,9 @@ void get_filename(char **filename) {
 * 
 */
 int get_cars(const char *filename, car **cars) {
-	FILE *file = NULL;
-	int count = 0;
-	char *raw_input = NULL;
-	bool array_scope = false;
-	bool object_scope = false;
+	FILE *file = NULL; //File to read cars from.
+	int count = 0; //Car count.
+	char *raw_input = NULL; //String with whole file.
 
 	file = fopen(filename, "r");
 	//Unable to find file -> escape.
@@ -497,9 +508,45 @@ int get_cars(const char *filename, car **cars) {
 	clean_json_string(&raw_input); //Getting clean json string.
 	printf("String:\n%s\n", raw_input); //Debug
 
+	//Allocate space for car.
+	if (*cars == NULL) {
+		*cars = malloc(sizeof(car));
+	}
 
+//	while (raw_input != NULL) {
+		//flag = get_obj_str(&object_string, raw_input); //by { and }
+		//if !flag -> free(raw_input); raw_input = NULL; / else -> next line
+		//flag_car = get_car_from_obj_str(object_string, &(cars[0][i])); //Searching for car.
+		//if flag_car -> alloc more space; count++;
+//	}
+
+	if (count == 0) {
+		free(*cars);
+		*cars = NULL;
+	}
 
 	return count;
+}
+
+/*
+* Removes object_string from string. Takes out one scope of {}.
+* In simple words moves one {object} from string to object_string.
+* Returns false on failure and true on success.
+*/
+bool get_obj_str(char **object_string, char **string) {
+
+	return false;
+}
+
+/*
+* Gets car from object_string.
+* Fails in case of lack of variables. Must get '{"make":"string","model":"string","price":int,"emission":float}' in any order.
+* car_obj is a mess in case of failure, so it must be handled outside.
+* Returns false on failure and true on success.
+*/
+bool get_car_from_obj_str(const char *object_string,car *car_obj) {
+
+	return false;
 }
 
 /*
@@ -530,7 +577,7 @@ void read_file_to_string(FILE *file, char **string) {
 		free(*string);
 		*string = NULL;
 	}
-	*string = (char *)malloc((i + 1) * sizeof(char));
+	*string = (char *)malloc(((size_t)i + 1) * sizeof(char));
 	//malloc() failed or no file given -> escape.
 	if (*string == NULL || file == NULL) {
 		return;
@@ -540,7 +587,7 @@ void read_file_to_string(FILE *file, char **string) {
 		input = getc(file);
 		if (!feof(file) && !ferror(file)) {
 			i++;
-			char *temp_string = realloc(*string, (i + 1) * sizeof(char));
+			char *temp_string = realloc(*string, ((size_t)i + 1) * sizeof(char));
 			if (temp_string == NULL) { //realloc() failed -> escaping.
 				if (i == 1) { //Realloc failed on the first char -> string must be empty.
 					free(*string);
