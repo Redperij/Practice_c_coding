@@ -51,11 +51,13 @@ void get_filename(char **filename);
 */
 int get_cars(const char *filename, car **cars);
 /*
-* Removes object_string from string. Takes out one scope of {}.
-* In simple words moves one {object} from string to object_string.
+* Removes object_string from string. Takes out one scope of {}. Must be used only in 'array of objects' scope.
+* In simple words moves one {object} from string_ptr to object_string_ptr.
+* IMPORTANT NOTE: Memory must be handled outside of the function! Function returns only two pointers and terminates object_string_ptr in place of '}'.
+* Advice: Feed the starting pointer to the function and use it again to get leftover and process it again. Original pointer must be saved in order to free memory.
 * Returns false on failure and true on success.
 */
-bool get_obj_str(char **object_string, char **string);
+bool get_obj_str(char **object_string_ptr, char **string_ptr);
 /*
 * Gets car from object_string.
 * Fails in case of lack of variables. Must get '{"make":"string","model":"string","price":int,"emission":float}' in any order.
@@ -496,6 +498,7 @@ int get_cars(const char *filename, car **cars) {
 	int count = 0; //Car count.
 	char *raw_input = NULL; //String with whole file.
 	char *object_string = NULL;
+	char *unparsed_json_ptr = NULL;
 
 	file = fopen(filename, "r");
 	//Unable to find file -> escape.
@@ -514,10 +517,20 @@ int get_cars(const char *filename, car **cars) {
 		*cars = malloc(sizeof(car));
 	}
 
-	get_obj_str(&object_string, &raw_input);
+	unparsed_json_ptr = raw_input;
+
+	get_obj_str(&object_string, &unparsed_json_ptr);
+
+	printf("Object string:\n%s\n", object_string);
+	printf("String with json:\n%s\n", unparsed_json_ptr);
+
+	get_obj_str(&object_string, &unparsed_json_ptr);
+
+	printf("Object string:\n%s\n", object_string);
+	printf("String with json:\n%s\n", unparsed_json_ptr);
 
 //	while (raw_input != NULL) {
-		//flag = get_obj_str(&object_string, raw_input); //by { and }
+		//flag = get_obj_str(&object_string, &raw_input); //by { and }
 		//if !flag -> free(raw_input); raw_input = NULL; / else -> next line
 		//flag_car = get_car_from_obj_str(object_string, &(cars[0][i])); //Searching for car.
 		//if flag_car -> alloc more space; count++;
@@ -532,39 +545,46 @@ int get_cars(const char *filename, car **cars) {
 }
 
 /*
-* Removes object_string from string. Takes out one scope of {}.
-* In simple words moves one {object} from string to object_string.
+* Removes object_string from string. Takes out one scope of {}. Must be used only in 'array of objects' scope.
+* In simple words moves one {object} from string_ptr to object_string_ptr.
+* IMPORTANT NOTE: Memory must be handled outside of the function! Function returns only two pointers and terminates object_string_ptr in place of '}'.
+* Advice: Feed the starting pointer to the function and use it again to get leftover and process it again. Original pointer must be saved in order to free memory.
 * Returns false on failure and true on success.
 */
-bool get_obj_str(char **object_string, char **string) {
-	if (*string == NULL) return; //String doesn't exist -> escape.
+bool get_obj_str(char **object_string_ptr, char **string_ptr) {
+	if (*string_ptr == NULL) return; //String doesn't exist -> escape.
 	char *start = NULL;
 	char *end = NULL;
-
-	if (*object_string != NULL) {
-		free(*object_string);
-		*object_string = NULL;
-	}
+	*object_string_ptr = NULL; //Again. These two are just pointers, not arrays with allocated memory!
 
 	//Rewrite loop
-	for (int i = 0; i < strlen(*string); i++) {
-		if (string[0][i] == '{') {
-			start = &string[0][i];
+	for (int i = 0; i < strlen(*string_ptr); i++) {
+		if (start == NULL && string_ptr[0][i] == '{') {
+			start = &string_ptr[0][i];
 		}
-		if (string[0][i] == '}') {
-			end = &string[0][i];
+		if (end == NULL && string_ptr[0][i] == '}') {
+			end = &string_ptr[0][i];
 		}
-		if (start != NULL && end != NULL) break;
 	}
 	if (start == NULL || end == NULL) {
 		return false;
 	}
-	printf("From start to { : %d\n", start - (*string));
-	printf("Size of object: %d\n", end - start);
-	printf("From start to } : %d\n", end - (*string));
-	printf("string[0][start - (*string)] = %c\n", string[0][start - (*string)]);
-	printf("string[0][end - start] = %c\n", string[0][end - start - 1]);
-	printf("string[0][end - (*string)] = %c\n", string[0][end - (*string)]);
+
+	//1. Increasing start pointer by one place.
+	if (start + 1 != end) {
+		start++;
+	}
+	//2. Setting object pointer to the start.
+	*object_string_ptr = start;
+	//3. Moving string pointer to the (end + 1) place if possible.
+	if(*(end + 1) != '\0') {
+		*string_ptr = end + 1;
+	}
+	else {
+		*string_ptr = NULL;
+	}
+	//4. Changing end value ('}') to the '\0'
+	*end = '\0';
 
 	return true;
 }
