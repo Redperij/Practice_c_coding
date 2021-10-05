@@ -62,9 +62,7 @@ bool read_line(char *line, size_t size) {
 
 
 bool binary_reader(unsigned int *pu){
-	char *line = malloc(2 * sizeof(char)); //Line with read characters.
-	char *single_char = malloc(2 * sizeof(char)); //Read character.
-	char *prefix = "0b"; //Prefix to find.
+	char *line = malloc(65 * sizeof(char)); //Line with read characters.
 	char *char_ptr = NULL; //Pointer to char.
 	int count = 0; //Counts characters in line.
 	bool nostop = true; //Stop flag.
@@ -74,27 +72,9 @@ bool binary_reader(unsigned int *pu){
 		return false;
 	}
 
-	//Reading first char.
-	nostop = read_line(single_char, 2);
-	if (!nostop) { //No value read -> escape
-		return false;
-	}
-	do {
-		char *temp_line; //Pointer to reallocate memory for line.
-		line[count] = single_char[0]; //Adding char to the line.
-		count++;
-		
-		//Reallocating memory for additional char.
-		temp_line = realloc(line, (count + 1) * sizeof(char));
-		if (temp_line == NULL) {
-			return false; //realloc() failed -> escape
-		}
-		line = temp_line; //Getting correct ponter.
+	//Reading line.
+	nostop = read_line(line, 64);
 
-		nostop = read_line(single_char, 2); //Reading next char.
-	} while (single_char[0] != '\n' && nostop);
-
-	line[count] = '\0'; //Terminating line.
 	//char_ptr = strstr(line, prefix); //Getting pointer to the prefix.
 	for (int i = 0; i < strlen(line); i++) {
 		if (line[i] == 'b') {
@@ -114,19 +94,22 @@ bool binary_reader(unsigned int *pu){
 			(*pu) <<= 1; //Shift one bit left.
 		}
 		if (*char_ptr == '1') {
-			(*pu) += 1; //Add one...
-			(*pu) <<= 1; //and shift one bit left.
+			(*pu) <<= 1; //Shift one bit left...
+			(*pu) += 1; //and add one.
 		}
 		char_ptr++; //Move one char forward.
 	}
-	*pu = (*pu) >> 1; //Finished -> shift one bit back.
+
+	free(line);
+	line = NULL;
 
 	return true;
 }
 
 
 int digit_counter(unsigned int nr){
-	unsigned int count = 0;
+	unsigned int count = 1;
+	nr = nr >> 4;
 	while (nr) {
 		count++;
 		nr = nr >> 4;
