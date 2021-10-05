@@ -116,3 +116,11 @@ int digit_counter(unsigned int nr){
 	}
 	return count;
 }
+
+int print_string(const char *string, void (*print_char)(char)) {
+	int i = 0;
+	for (i = 0; i < strlen(string); i++) {
+		print_char(string[i]);
+	}
+	return i;
+}
