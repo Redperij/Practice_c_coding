@@ -9,6 +9,10 @@
 
 #define FILENAME "listofcars.txt"
 #define MAX_FILENAME 255
+#define MAKE_TAG "\"make\""
+#define MODEL_TAG "\"model\""
+#define PRICE_TAG "\"price\""
+#define EMISSIONS_TAG "\"emissions\""
 
 //Holds data in binary format in file.
 typedef struct car_ {
@@ -47,7 +51,8 @@ void print_menu();
 */
 void get_filename(char **filename);
 /*
-*
+* Gets cars from the specified file.
+* Returns number of cars read or -1 in case of lack of the file.
 */
 int get_cars(const char *filename, car **cars);
 /*
@@ -70,17 +75,31 @@ bool get_car_from_obj_str(const char *object_string, car *car_obj);
 */
 void clear_newlines(char **string);
 /*
-* Reads specified file to string.
+* Reads whole file until EOF and puts it into the string. (Dynamic memory)
 */
 void read_file_to_string(FILE *file, char **string);
-
+/*
+* Clears received json string from whitespaces and newlines. Doesn't affect variable scopes.
+* ( '{ "make" : "My Car" }' -> '{"make":"My Car"}' )
+*/
 void clean_json_string(char **string);
+/*
+* Converts cleaned json string into readable json string.
+* Changes all ',' into whitespaces.
+*/
+void json_str_to_readable_json_str (char **jsonstr);
+/*
+* Terminates json string on specified character outside of the variable scope.
+*/
+void term_json_on_char(char **jsonstr, const char terminator);
 
 int main() {
 	car *new_car = NULL; //Holds new car to add to the file.
 	car *cars = NULL; //Array with all cars from the file.
 	int size = 0; //Size of the cars array.
 	int command = 0; //Command received from user.
+	char *filename;
+	int cars_to_add = 0; //cars_to_add for adding cars from the file.
 
 	while (command != 4) {
 		print_menu();
@@ -125,10 +144,10 @@ int main() {
 
 			//Adding new car to the file.
 			if (add_new_car_to_file(FILENAME, new_car)) {
-				printf("Was unable to add new car to the file.\n");
+				printf("Was unable to add new car to the \'%s\' file.\n", FILENAME);
 			}
 			else {
-				printf("Successfully added new car to the file.\n");
+				printf("Successfully added new car to the \'%s\' file.\n", FILENAME);
 			}
 
 			//Emptying memory.
@@ -137,8 +156,31 @@ int main() {
 				new_car = NULL;
 			}
 			break;
-		case 3:
-			get_cars("to_add.json", &cars);
+		case 3: //Add cars from the file.
+			cars_to_add = 0;
+			get_filename(&filename); //Getting filename.
+			cars_to_add = get_cars(filename, &cars); //Getting cars from the json formatted file.
+
+			if (cars_to_add == -1) { //File mistake.
+				printf("\nWas unable to open the \'%s\' file\n", filename);
+			}
+			else if (cars_to_add == 0) { //Memory mistake or no cars.
+				printf("\nGot no cars from the \'%s\' file. Please, check the formatting. It must follow json standarts.\n", filename);
+			}
+			else {
+				int addititions = 0;
+				for(int i = 0; i < cars_to_add; i++) {
+					if (add_new_car_to_file(FILENAME, &cars[i]) == 0) {
+						addititions++;
+					}
+				}
+				if(addititions == cars_to_add) { //Added to file cars must match the cars to add.
+					printf("\nSuccessfully added all cars to the \'%s\' file.\n", FILENAME);
+				}
+				else {
+					printf("\nWas unable to add all cars to the file.\nSomething went wrong. Please, check the \'%s\' file.\n", FILENAME);
+				}
+			}
 			break;
 		case 4: //Quit the program.
 			printf("\n**********************************************************\n");
@@ -407,6 +449,7 @@ int get_cars_from_file(const char *filename, car **cars) {
 	}
 
 	fclose(file);
+	//Free the memory.
 	if (data != NULL) {
 		free(data);
 	}
@@ -491,54 +534,84 @@ void get_filename(char **filename) {
 }
 
 /*
-* 
+* Gets cars from the specified file.
+* Returns number of cars read or -1 in case of lack of the file.
 */
 int get_cars(const char *filename, car **cars) {
 	FILE *file = NULL; //File to read cars from.
 	int count = 0; //Car count.
 	char *raw_input = NULL; //String with whole file.
-	char *object_string = NULL;
-	char *unparsed_json_ptr = NULL;
+	char *object_string = NULL; //object_string received from function.
+	char *unparsed_json_ptr = NULL; //Pointer to the raw_input string. Is changed by get_obj_str()
+	//flags
+	bool got_object = false;
+	bool got_car = false;
+	bool corrupt_data = false;
+
+	if(*cars != NULL) {
+		free(*cars);
+		*cars = NULL;
+	}
+
+	*cars = malloc(sizeof(car));
 
 	file = fopen(filename, "r");
 	//Unable to find file -> escape.
-	if (file == NULL) {
-		return -2;
+	if (file == NULL || *cars == NULL) {
+		if (file == NULL) return -1; //File not found -> escape.
+		return count; //Memory allocation failure -> escape.
 	}
 
 	read_file_to_string(file, &raw_input); //Getting raw json string.
 	fclose(file);
 
 	clean_json_string(&raw_input); //Getting clean json string.
-	printf("String:\n%s\n", raw_input); //Debug
+	//json_str_to_readable_json_str(&raw_input); //Making raw_input readable.
 
-	//Allocate space for car.
-	if (*cars == NULL) {
-		*cars = malloc(sizeof(car));
+	unparsed_json_ptr = raw_input; //Getting pointer to the raw_input string.
+
+	//Getting cars from the file.
+	do {
+		got_object = get_obj_str(&object_string, &unparsed_json_ptr); //Getting object string to convert.
+		if (got_object) {
+			got_car = get_car_from_obj_str(object_string, &cars[0][count]); //Converting object string into the car.
+			if (got_car) {
+				car *temp_cars = NULL; //Temporary pointer for memory reallocation.
+				count++; //Increase number of cars.
+				temp_cars = realloc(*cars, (count + 1) * sizeof(car)); //Reallocate memory for anothe car.
+				if (temp_cars == NULL) { //Return what already have.
+					return count; //realloc() failed -> escape.
+				}
+				*cars = temp_cars;
+			}
+			else {
+				corrupt_data = true;
+			}
+		}
+	} while (got_object);
+
+	if (corrupt_data) {
+		printf("Data in the file \'%s\' is corrupted. Results may be unexpected!\n", filename);
 	}
 
-	unparsed_json_ptr = raw_input;
+	//Get rid of the redundant memory.
+	if (count != 0) {
+		car *temp_cars = NULL; //Temporary pointer for memory reallocation.
+		temp_cars = realloc(*cars, count * sizeof(car)); //Reallocate memory for an array (shrink it).
+		if (temp_cars == NULL) { //Return what already have.
+			return count; //realloc() failed -> escape.
+		}
+		*cars = temp_cars;
+	}
 
-	get_obj_str(&object_string, &unparsed_json_ptr);
-
-	printf("Object string:\n%s\n", object_string);
-	printf("String with json:\n%s\n", unparsed_json_ptr);
-
-	get_obj_str(&object_string, &unparsed_json_ptr);
-
-	printf("Object string:\n%s\n", object_string);
-	printf("String with json:\n%s\n", unparsed_json_ptr);
-
-//	while (raw_input != NULL) {
-		//flag = get_obj_str(&object_string, &raw_input); //by { and }
-		//if !flag -> free(raw_input); raw_input = NULL; / else -> next line
-		//flag_car = get_car_from_obj_str(object_string, &(cars[0][i])); //Searching for car.
-		//if flag_car -> alloc more space; count++;
-//	}
-
+	//Free memory. 
 	if (count == 0) {
 		free(*cars);
 		*cars = NULL;
+	}
+	if (raw_input != NULL) {
+		free(raw_input);
+		raw_input = NULL;
 	}
 
 	return count;
@@ -552,13 +625,13 @@ int get_cars(const char *filename, car **cars) {
 * Returns false on failure and true on success.
 */
 bool get_obj_str(char **object_string_ptr, char **string_ptr) {
-	if (*string_ptr == NULL) return; //String doesn't exist -> escape.
+	if (*string_ptr == NULL) return false; //String doesn't exist -> escape.
 	char *start = NULL;
 	char *end = NULL;
 	*object_string_ptr = NULL; //Again. These two are just pointers, not arrays with allocated memory!
 
-	//Rewrite loop
-	for (int i = 0; i < strlen(*string_ptr); i++) {
+	//Loops through whole string remembering first '{' and '}' - it is first object.
+	for (unsigned int i = 0; i < strlen(*string_ptr); i++) {
 		if (start == NULL && string_ptr[0][i] == '{') {
 			start = &string_ptr[0][i];
 		}
@@ -567,7 +640,7 @@ bool get_obj_str(char **object_string_ptr, char **string_ptr) {
 		}
 	}
 	if (start == NULL || end == NULL) {
-		return false;
+		return false; //No object found -> escape.
 	}
 
 	//1. Increasing start pointer by one place.
@@ -577,7 +650,7 @@ bool get_obj_str(char **object_string_ptr, char **string_ptr) {
 	//2. Setting object pointer to the start.
 	*object_string_ptr = start;
 	//3. Moving string pointer to the (end + 1) place if possible.
-	if(*(end + 1) != '\0') {
+	if (*(end + 1) != '\0') {
 		*string_ptr = end + 1;
 	}
 	else {
@@ -591,13 +664,106 @@ bool get_obj_str(char **object_string_ptr, char **string_ptr) {
 
 /*
 * Gets car from object_string.
-* Fails in case of lack of variables. Must get '{"make":"string","model":"string","price":int,"emission":float}' in any order.
+* Fails in case of lack of variables. Must get '"make":"string","model":"string","price":int,"emission":float' in any order.
 * car_obj is a mess in case of failure, so it must be handled outside.
 * Returns false on failure and true on success.
 */
 bool get_car_from_obj_str(const char *object_string,car *car_obj) {
+	char *ptr_to_element; //Pointers to the variables inside the object_string.
+	char *string_with_variable = malloc(strlen(object_string) * sizeof(char)); //String with one variable.
+	char *make = NULL; //Make of the car.
+	char *model = NULL; //Model of the car.
+	int price = 0; //Price of the car.
+	float co2_emissions = 0; //CO2 emissions of the car.
 
-	return false;
+	if (string_with_variable == NULL) {
+		return false; //malloc() failure -> escape.
+	}
+	//Getting make
+	ptr_to_element = strstr(object_string, MAKE_TAG);
+	if (ptr_to_element != NULL) {
+		strcpy(string_with_variable, ptr_to_element);
+		term_json_on_char(&string_with_variable, ',');
+		make = malloc(strlen(string_with_variable) * sizeof(char));
+		if(make == NULL) {
+			return false; //malloc() failure -> escape.
+		}
+		else {
+			char *temp_pointer = strstr(string_with_variable, ":");
+			if(temp_pointer == NULL) {
+				return false; //No ':' found -> escape.
+			}
+			if(strlen(temp_pointer) <= 2) {
+				return false; // if it is "make":"" -> escape.
+			}
+			temp_pointer += 2; //Move pointer to the second element
+			strcpy(make, temp_pointer); //Copy string until the end.
+			make[strlen(make) - 1] = '\0'; //Terminate string on the '"'.
+		}
+	}
+	//Getting model
+	ptr_to_element = strstr(object_string, MODEL_TAG);
+	if (ptr_to_element != NULL) {
+		strcpy(string_with_variable, ptr_to_element);
+		term_json_on_char(&string_with_variable, ',');
+		model = malloc(strlen(string_with_variable) * sizeof(char));
+		if (model == NULL) {
+			return false; //malloc() failure -> escape.
+		}
+		else {
+			char *temp_pointer = strstr(string_with_variable, ":");
+			if (temp_pointer == NULL) {
+				return false; //No ':' found -> escape.
+			}
+			if (strlen(temp_pointer) <= 2) {
+				return false; // if it is "make":"" -> escape.
+			}
+			temp_pointer += 2; //Move pointer to the second element
+			strcpy(model, temp_pointer); //Copy string until the end.
+			model[strlen(model) - 1] = '\0'; //Terminate string on the '"'.
+		}
+	}
+	//Getting price
+	ptr_to_element = strstr(object_string, PRICE_TAG);
+	if (ptr_to_element != NULL) {
+		strcpy(string_with_variable, ptr_to_element);
+		term_json_on_char(&string_with_variable, ',');
+		if (sscanf(string_with_variable, "\"price\":%d", &price) != 1) {
+			return false; //Must get all variables -> escape.
+		}
+	}
+	//Getting co2_emissions
+	ptr_to_element = strstr(object_string, EMISSIONS_TAG);
+	if (ptr_to_element != NULL) {
+		strcpy(string_with_variable, ptr_to_element);
+		term_json_on_char(&string_with_variable, ',');
+		if (sscanf(string_with_variable, "\"emissions\":%f", &co2_emissions) != 1) {
+			return false; //Must get all variables -> escape.
+		}
+	}
+
+	//make and model must exist and be at least 1 char long.
+	if (make == NULL || model == NULL || strlen(make) == 0 || strlen(model) == 0) {
+		return false; // -> escape.
+	}
+
+	car_obj->make = malloc((strlen(make) + 1) * sizeof(char));
+	car_obj->model = malloc((strlen(model) + 1) * sizeof(char));
+
+	if (car_obj->make == NULL || car_obj->model == NULL) {
+		return false; //malloc() failed -> escape.
+	}
+	if (price < 0 || co2_emissions < 0) {
+		return false; //price and co2_emissions cannot be negative -> escape.
+	}
+
+	//Building car.
+	strcpy(car_obj->make, make);
+	strcpy(car_obj->model, model);
+	car_obj->price = price;
+	car_obj->co2_emission = co2_emissions;
+
+	return true;
 }
 
 /*
@@ -618,7 +784,9 @@ void clear_newlines(char **string) {
 		}
 	}
 }
-
+/*
+* Reads whole file until EOF and puts it into the string. (Dynamic memory)
+*/
 void read_file_to_string(FILE *file, char **string) {
 	int i = 0; //Number of iterations.
 	char input; //Char from input
@@ -656,13 +824,17 @@ void read_file_to_string(FILE *file, char **string) {
 	string[0][i] = '\0'; //Terminating string.
 }
 
+/*
+* Clears received json string from whitespaces and newlines. Doesn't affect variable scopes.
+* ( '{ "make" : "My Car" }' -> '{"make":"My Car"}' )
+*/
 void clean_json_string(char **string) {
-	//Being safe.
-	if (*string == NULL) return;
-
+	if (*string == NULL) return; //Received null pointer.
 	bool var_scope = false; //Flag to check whether whitespace is located inside the variable scope. (We don't want to ruin the names)
 	int i = 0;
 	int w = strlen(*string);
+	char prev_char = ' '; //Not the best way to check '\', but there shouldn't be '\' in the end of the make or model of the car. (it should be enough)
+
 	for (i = 0; i < w; i++) {
 		//Clear all whitespaces outside the variable scopes.
 		if (isspace(string[0][i]) && !var_scope) {
@@ -673,13 +845,70 @@ void clean_json_string(char **string) {
 			i--;
 		}
 		//It is '"' -> flip variable scope.
-		else if (string[0][i] == '"') {
+		else if (prev_char != '\\' && string[0][i] == '\"') {
 			if (var_scope) {
 				var_scope = false;
 			}
 			else {
 				var_scope = true;
 			}
+		}
+		else {
+			prev_char = string[0][i];
+		}
+	}
+}
+/*
+* Converts cleaned json string into readable json string.
+* Changes all ',' into whitespaces.
+*/
+void json_str_to_readable_json_str (char **jsonstr) {
+	if (*jsonstr == NULL) return; //Received null pointer.
+	bool var_scope = false;
+	char prev_char = ' '; //Not the best way to check '\', but there shouldn't be '\' in the end of the make or model of the car. (it should be enough)
+
+	for (unsigned int i = 0; i < strlen(*jsonstr); i++) {
+		if (!var_scope && jsonstr[0][i] == ',') {
+			jsonstr[0][i] = ' ';
+		}
+		//It is '"' -> flip variable scope.
+		else if (prev_char != '\\' && jsonstr[0][i] == '\"') {
+			if(var_scope) {
+				var_scope = false;
+			}
+			else {
+				var_scope = true;
+			}
+		}
+		else {
+			prev_char = jsonstr[0][i];
+		}
+	}
+}
+/*
+* Terminates json string on specified character outside of the variable scope.
+*/
+void term_json_on_char (char **jsonstr, const char terminator) {
+	if (*jsonstr == NULL) return; //Received null pointer.
+	bool var_scope = false;
+	char prev_char = ' '; //Not the best way to check '\', but there shouldn't be '\' in the end of the make or model of the car. (it should be enough)
+
+	for (unsigned int i = 0; i < strlen(*jsonstr); i++) {
+		if (!var_scope && jsonstr[0][i] == terminator) {
+			jsonstr[0][i] = '\0';
+			break;
+		}
+		//It is '"' -> flip variable scope.
+		else if (prev_char != '\\' && jsonstr[0][i] == '\"') {
+			if(var_scope) {
+				var_scope = false;
+			}
+			else {
+				var_scope = true;
+			}
+		}
+		else {
+			prev_char = jsonstr[0][i];
 		}
 	}
 }
