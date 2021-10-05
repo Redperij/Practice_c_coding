@@ -1,31 +1,20 @@
 #pragma warning(disable:4996) //disabling warning
 
 /*
-Assume following declarations and definitions:
+You need to implement two functions: binary_reader and digit_counter
 
-#define MAX_LEN 32
+Binary reader takes a pointer to unsigned int as parameter and returns boolean value.
+True means that a binary number was successfully read.
+Call read_line to read strings that are to be converted to unsigned integers.
+Read_line returns true when a line was successfully read and false when the end of input is reached.
 
-typedef struct student_ {
-	char name[MAX_LEN];
-	int group;
-	int id;
-	struct student_ *next;
-} student;
+Each valid input line contains a binary number that starts with prefix "0b".
+There may be white space at beginning of the line before prefix.
+When a valid prefix is found binary reader reads binary digits until it reads a character that is not a '0' or '1'.
+Hint: when a valid digit is found shift the current value to left and and set the new value to least significant bit.
 
-int move(student **source, int group, student **target);
-
-
-Implement function move() that moves elements from source to target.
-Second parameter, group, determines which elements to move.
-Only the elements of matching group are moved to target list.
-Both source and target are linked lists that are initialized by the caller.
-The end of list is market by setting next pointer of the last element to NULL.
-
-When you remove elements from the source you must preserve the order of remaining elements.
-When you add an element to the target it must be added at the beginning of the traget list.
-
-Move returns the number of elements moved to the target.
-Function returns zero if no matching elements were found.
+Digit counter returns the minimum number of hexadecimal digits that are needed to print the number given as parameter.
+Hint: you need find the leftmost group of 4 bits that have value greater than 0.
 */
 
 #include <stdio.h>
@@ -34,137 +23,113 @@ Function returns zero if no matching elements were found.
 #include <ctype.h>
 #include <stdbool.h>
 
-#define FILENAME "in.txt"
+/* call this function to read input */
+bool read_line(char *line, size_t size);
 
-#define MAX_LEN 32
+/* you need to implement the following two functions */
 
-typedef struct student_ {
-	char name[MAX_LEN];
-	int group;
-	int id;
-	struct student_ *next;
-} student;
+bool binary_reader(unsigned int *pu);
 
-int move(student **source, int group, student **target);
+int digit_counter(unsigned int nr);
 
-int main() {
-	student *save_me = malloc(10 * sizeof(student));
-	student *target = malloc(10 * sizeof(student));
+FILE *file;
 
-	//source
-	save_me[0].name[0] = 'a';
-	save_me[0].name[1] = '\0';
-	save_me[0].group = 1;
-	save_me[0].id = 1;
-	save_me[0].next = &save_me[1];
+int main(int arcg, char **argv)
+{
+	unsigned int number = 0;
 
-	save_me[1].name[0] = 'b';
-	save_me[1].name[1] = '\0';
-	save_me[1].group = 2;
-	save_me[1].id = 2;
-	save_me[1].next = &save_me[2];
+	file = fopen("in.txt", "r");
 
-	save_me[2].name[0] = 'c';
-	save_me[2].name[1] = '\0';
-	save_me[2].group = 1;
-	save_me[2].id = 3;
-	save_me[2].next = &save_me[3];
+	while (binary_reader(&number)) {
+		printf("%11u: %08X, %d\n", number, number, digit_counter(number));
+	};
 
-	save_me[3].name[0] = 'd';
-	save_me[3].name[1] = '\0';
-	save_me[3].group = 1;
-	save_me[3].id = 4;
-	save_me[3].next = &save_me[4];
-
-	save_me[4].name[0] = 'e';
-	save_me[4].name[1] = '\0';
-	save_me[4].group = 3;
-	save_me[4].id = 5;
-	save_me[4].next = NULL;
-
-	//target
-	target[0].name[0] = 'f';
-	target[0].name[1] = '\0';
-	target[0].group = 1;
-	target[0].id = 6;
-	target[0].next = &target[1];
-
-	target[1].name[0] = 'g';
-	target[1].name[1] = '\0';
-	target[1].group = 3;
-	target[1].id = 7;
-	target[1].next = NULL;
-
-	int i = 0;
-	int finish = 2;
-	printf("Source before move():\n");
-	while (finish) {
-		if (finish == 2) {
-			finish = 2;
-		}
-		printf("%d: (group %d) %s\n", save_me[i].id, save_me[i].group, save_me[i].name);
-		i++;
-		if ((save_me[i].next) == NULL || finish == 1) {
-			finish--;
-		}
-	}
-
-	i = 0;
-	finish = 2;
-	printf("Target before move():\n");
-	while (finish){
-		if (finish == 2) {
-			finish = 2;
-		}
-		printf("%d: (group %d) %s\n", target[i].id, target[i].group, target[i].name);
-		i++;
-		if ((target[i].next) == NULL || finish == 1) {
-			finish--;
-		}
-	}
-
-	int count = 0;
-	count = move(&save_me, 1, &target);
-
-	student **ppts = &save_me;
-	printf("Source after move():\n");
-	while (*ppts != NULL) {
-		printf("%d: (group %d) %s\n", (*ppts)->id, (*ppts)->group, (*ppts)->name);
-		ppts = &((*ppts)->next);
-	}
-
-	ppts = &target;
-	printf("Target after move():\n");
-	while (*ppts != NULL) {
-		printf("%d: (group %d) %s\n", (*ppts)->id, (*ppts)->group, (*ppts)->name);
-		ppts = &((*ppts)->next);
-	}
-
-	printf("Elements moved: %d", count);
+	fclose(file);
 
 	return 0;
+
+}
+
+/* call this function to read input */
+bool read_line(char *line, size_t size) {
+	char *return_value;
+	return_value = fgets(line, size, file);
+	if (return_value != NULL) {
+		return true;
+	}
+	return false;
 }
 
 
+bool binary_reader(unsigned int *pu){
+	char *line = malloc(2 * sizeof(char)); //Line with read characters.
+	char *single_char = malloc(2 * sizeof(char)); //Read character.
+	char *prefix = "0b"; //Prefix to find.
+	char *char_ptr = NULL; //Pointer to char.
+	int count = 0; //Counts characters in line.
+	bool nostop = true; //Stop flag.
+	*pu = 0;
 
-int move(student **source, int group, student **target) {
-	int count = 0;
+	if (line == NULL) { //malloc() failed -> escape
+		return false;
+	}
 
-	while (*source != NULL) {
-		if ((*source)->group == group) {
-			//Erasing pointer from source.
-			student *ptm = *source; //Remember current pointer.
-			*source = ptm->next; //Move source to next element.
-			//Adding pointer to the target.
-			ptm->next = *target; //Next pointer for remembered pointer is target list.
-			*target = ptm; //Target list starts from remembered pointer.
-
-			count++; //Increase count of moved elements.
+	//Reading first char.
+	nostop = read_line(single_char, 2);
+	if (!nostop) { //No value read -> escape
+		return false;
+	}
+	do {
+		char *temp_line; //Pointer to reallocate memory for line.
+		line[count] = single_char[0]; //Adding char to the line.
+		count++;
+		
+		//Reallocating memory for additional char.
+		temp_line = realloc(line, (count + 1) * sizeof(char));
+		if (temp_line == NULL) {
+			return false; //realloc() failed -> escape
 		}
-		else {
-			source = &(*source)->next; //Move source to next element.
+		line = temp_line; //Getting correct ponter.
+
+		nostop = read_line(single_char, 2); //Reading next char.
+	} while (single_char[0] != '\n' && nostop);
+
+	line[count] = '\0'; //Terminating line.
+	//char_ptr = strstr(line, prefix); //Getting pointer to the prefix.
+	for (int i = 0; i < strlen(line); i++) {
+		if (line[i] == 'b') {
+			char_ptr = &line[i];
+			break;
 		}
 	}
 
+	//No prefix found -> return.
+	if (char_ptr == NULL) {
+		return false;
+	}
+
+	char_ptr++; //Move pointer by 2 characters forward. It is start of the binary number.
+	while (*char_ptr == '0' || *char_ptr == '1') {
+		if (*char_ptr == '0') {
+			(*pu) <<= 1; //Shift one bit left.
+		}
+		if (*char_ptr == '1') {
+			(*pu) += 1; //Add one...
+			(*pu) <<= 1; //and shift one bit left.
+		}
+		char_ptr++; //Move one char forward.
+	}
+	*pu = (*pu) >> 1; //Finished -> shift one bit back.
+
+	return true;
+}
+
+
+int digit_counter(unsigned int nr){
+	unsigned int count = 0;
+	while (nr) {
+		count++;
+		nr = nr >> 4;
+	}
 	return count;
 }
