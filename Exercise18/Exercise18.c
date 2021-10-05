@@ -84,11 +84,6 @@ void read_file_to_string(FILE *file, char **string);
 */
 void clean_json_string(char **string);
 /*
-* Converts cleaned json string into readable json string.
-* Changes all ',' into whitespaces.
-*/
-void json_str_to_readable_json_str (char **jsonstr);
-/*
 * Terminates json string on specified character outside of the variable scope.
 */
 void term_json_on_char(char **jsonstr, const char terminator);
@@ -566,7 +561,6 @@ int get_cars(const char *filename, car **cars) {
 	fclose(file);
 
 	clean_json_string(&raw_input); //Getting clean json string.
-	//json_str_to_readable_json_str(&raw_input); //Making raw_input readable.
 
 	unparsed_json_ptr = raw_input; //Getting pointer to the raw_input string.
 
@@ -855,33 +849,6 @@ void clean_json_string(char **string) {
 		}
 		else {
 			prev_char = string[0][i];
-		}
-	}
-}
-/*
-* Converts cleaned json string into readable json string.
-* Changes all ',' into whitespaces.
-*/
-void json_str_to_readable_json_str (char **jsonstr) {
-	if (*jsonstr == NULL) return; //Received null pointer.
-	bool var_scope = false;
-	char prev_char = ' '; //Not the best way to check '\', but there shouldn't be '\' in the end of the make or model of the car. (it should be enough)
-
-	for (unsigned int i = 0; i < strlen(*jsonstr); i++) {
-		if (!var_scope && jsonstr[0][i] == ',') {
-			jsonstr[0][i] = ' ';
-		}
-		//It is '"' -> flip variable scope.
-		else if (prev_char != '\\' && jsonstr[0][i] == '\"') {
-			if(var_scope) {
-				var_scope = false;
-			}
-			else {
-				var_scope = true;
-			}
-		}
-		else {
-			prev_char = jsonstr[0][i];
 		}
 	}
 }
