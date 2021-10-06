@@ -1,20 +1,35 @@
 #pragma warning(disable:4996) //disabling warning
 
 /*
-You need to implement two functions: binary_reader and digit_counter
+Assume the following declarations:
 
-Binary reader takes a pointer to unsigned int as parameter and returns boolean value.
-True means that a binary number was successfully read.
-Call read_line to read strings that are to be converted to unsigned integers.
-Read_line returns true when a line was successfully read and false when the end of input is reached.
+#define MAX_LEN 32
 
-Each valid input line contains a binary number that starts with prefix "0b".
-There may be white space at beginning of the line before prefix.
-When a valid prefix is found binary reader reads binary digits until it reads a character that is not a '0' or '1'.
-Hint: when a valid digit is found shift the current value to left and and set the new value to least significant bit.
+typedef struct student_ {
+    char name[MAX_LEN];
+    int group;
+    int id;
+} student;
 
-Digit counter returns the minimum number of hexadecimal digits that are needed to print the number given as parameter.
-Hint: you need find the leftmost group of 4 bits that have value greater than 0.
+typedef enum { byGroup, byLastName, byFirstName } sort_order;
+
+void sort_students(student *students, int count, sort_order sb);
+
+
+Implement function sort_students.
+
+First parameter is array of students.
+Second parameter is number of studenst to sort from the beginning of the array.
+If zero or negative value is given then all student should be sorted.
+The end of array marker has id set to zero (id==0).
+Third parameter is the sort criteria.
+Sort_students must use qsort() from standard library to sort the
+
+The sort criterias are:
+
+byGroup :Compare group numbers
+byFirstName : First name comes first in the string and is separated from the last name by space
+byLastName : As above but comparison must find last name from the strings and compare them
 */
 
 #include <stdio.h>
@@ -23,104 +38,158 @@ Hint: you need find the leftmost group of 4 bits that have value greater than 0.
 #include <ctype.h>
 #include <stdbool.h>
 
-/* call this function to read input */
-bool read_line(char *line, size_t size);
+#define MAX_LEN 32
 
-/* you need to implement the following two functions */
+typedef struct student_ {
+    char name[MAX_LEN];
+    int group;
+    int id;
+} student;
 
-bool binary_reader(unsigned int *pu);
+typedef enum { byGroup, byLastName, byFirstName } sort_order;
 
-int digit_counter(unsigned int nr);
+void sort_students(student *students, int count, sort_order sb);
 
-FILE *file;
+int main(int arcg, char **argv) {
+    student students[6];
+    char *name = malloc(33 * sizeof(char));
 
-int main(int arcg, char **argv)
-{
-	unsigned int number = 0;
+    if (name == NULL) return 1;
 
-	file = fopen("in.txt", "r");
+    name = "Vasya Petrov";
+    for (int i = 0; i <= strlen(name); i++) {
+        students[0].name[i] = name[i];
+    }
+    students[0].id = 1;
+    students[0].group = 1;
 
-	while (binary_reader(&number)) {
-		printf("%11u: %08X, %d\n", number, number, digit_counter(number));
-	};
+    name = "Anatolii Stepanov";
+    for (int i = 0; i <= strlen(name); i++) {
+        students[1].name[i] = name[i];
+    }
+    students[1].id = 2;
+    students[1].group = 4;
 
-	fclose(file);
+    name = "Daniil Marinec";
+    for (int i = 0; i <= strlen(name); i++) {
+        students[2].name[i] = name[i];
+    }
+    students[2].id = 3;
+    students[2].group = 2;
 
+    name = "Sergey Konev";
+    for (int i = 0; i <= strlen(name); i++) {
+        students[3].name[i] = name[i];
+    }
+    students[3].id = 4;
+    students[3].group = 5;
+
+    name = "Andrey Kulikov";
+    for (int i = 0; i <= strlen(name); i++) {
+        students[4].name[i] = name[i];
+    }
+    students[4].id = 5;
+    students[4].group = 3;
+
+    name = "End";
+    for (int i = 0; i <= strlen(name); i++) {
+        students[5].name[i] = name[i];
+    }
+    students[5].id = 0;
+    students[5].group = 0;
+
+    printf("Students before sorting:\n");
+    for (int i = 0; i < 6; i++) {
+        printf("Student %d: Name: '%s' Group: %d\n", students[i].id, students[i].name, students[i].group);
+    }
+
+    sort_students(students, 5, byGroup);
+
+    printf("Sorted by group:\n");
+    for (int i = 0; i < 6; i++) {
+        printf("Student %d: Name: '%s' Group: %d\n", students[i].id, students[i].name, students[i].group);
+    }
+
+    sort_students(students, 5, byLastName);
+
+    printf("Sorted by lastname:\n");
+    for (int i = 0; i < 6; i++) {
+        printf("Student %d: Name: '%s' Group: %d\n", students[i].id, students[i].name, students[i].group);
+    }
+
+    sort_students(students, 0, byFirstName);
+
+    printf("Sorted by firstname:\n");
+    for (int i = 0; i < 6; i++) {
+        printf("Student %d: Name: '%s' Group: %d\n", students[i].id, students[i].name, students[i].group);
+    }
+	
 	return 0;
-
 }
 
-/* call this function to read input */
-bool read_line(char *line, size_t size) {
-	char *return_value;
-	return_value = fgets(line, size, file);
-	if (return_value != NULL) {
-		return true;
-	}
-	return false;
-}
+void sort_students(student *students, int count, sort_order sb) {
+    if (students == NULL) return;
+    int nstudents = 0;
+    student temp_student = students[0];
+    char *firstname1 = malloc((MAX_LEN + 1) * sizeof(char));
+    char *lastname1 = malloc((MAX_LEN + 1) * sizeof(char));
+    char *firstname2 = malloc((MAX_LEN + 1) * sizeof(char));
+    char *lastname2 = malloc((MAX_LEN + 1) * sizeof(char));
 
+    while (temp_student.id != 0) {
+        temp_student = students[nstudents];
+        nstudents++;
+    }
+    nstudents--;
 
-bool binary_reader(unsigned int *pu){
-	char *line = malloc(65 * sizeof(char)); //Line with read characters.
-	char *char_ptr = NULL; //Pointer to char.
-	int count = 0; //Counts characters in line.
-	bool nostop = true; //Stop flag.
-	*pu = 0;
+    if (count <= 0) { //Negative or zero sorts whole array.
+        count = nstudents;
+    }
 
-	if (line == NULL) { //malloc() failed -> escape
-		return false;
-	}
-
-	//Reading line.
-	nostop = read_line(line, 64);
-
-	//char_ptr = strstr(line, prefix); //Getting pointer to the prefix.
-	for (int i = 0; i < strlen(line); i++) {
-		if (line[i] == 'b') {
-			char_ptr = &line[i];
-			break;
-		}
-	}
-
-	//No prefix found -> return.
-	if (char_ptr == NULL) {
-		return false;
-	}
-
-	char_ptr++; //Move pointer by 2 characters forward. It is start of the binary number.
-	while (*char_ptr == '0' || *char_ptr == '1') {
-		if (*char_ptr == '0') {
-			(*pu) <<= 1; //Shift one bit left.
-		}
-		if (*char_ptr == '1') {
-			(*pu) <<= 1; //Shift one bit left...
-			(*pu) += 1; //and add one.
-		}
-		char_ptr++; //Move one char forward.
-	}
-
-	free(line);
-	line = NULL;
-
-	return true;
-}
-
-
-int digit_counter(unsigned int nr){
-	unsigned int count = 1;
-	nr = nr >> 4;
-	while (nr) {
-		count++;
-		nr = nr >> 4;
-	}
-	return count;
-}
-
-int print_string(const char *string, void (*print_char)(char)) {
-	int i = 0;
-	for (i = 0; i < strlen(string); i++) {
-		print_char(string[i]);
-	}
-	return i;
+    switch (sb)
+    {
+    case byGroup:
+        for (int i = 0; i < count; i++) {
+            for (int q = 1; q < count - i; q++) {
+                if (students[q].id != 0 && students[q - 1].group > students[q].group) {
+                    temp_student = students[q - 1];
+                    students[q - 1] = students[q];
+                    students[q] = temp_student;
+                }
+            }
+        }
+        break;
+    case byLastName:
+        for (int i = 0; i < count; i++) {
+            for (int q = 1; q < count - i; q++) {
+                if (students[q].id != 0) {
+                    sscanf(students[q - 1].name, "%s %s", firstname1, lastname1);
+                    sscanf(students[q].name, "%s %s", firstname2, lastname2);
+                    if (strcmp(lastname1, lastname2) > 0) {
+                        temp_student = students[q - 1];
+                        students[q - 1] = students[q];
+                        students[q] = temp_student;
+                    }
+                }
+            }
+        }
+        break;
+    case byFirstName:
+        for (int i = 0; i < count; i++) {
+            for (int q = 1; q < count - i; q++) {
+                if (students[q].id != 0) {
+                    sscanf(students[q - 1].name, "%s %s", firstname1, lastname1);
+                    sscanf(students[q].name, "%s %s", firstname2, lastname2);
+                    if (strcmp(firstname1, firstname2) >= 0) {
+                        temp_student = students[q - 1];
+                        students[q - 1] = students[q];
+                        students[q] = temp_student;
+                    }
+                }
+            }
+        }
+        break;
+    default:
+        break;
+    }
 }
