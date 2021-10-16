@@ -1,13 +1,11 @@
 #pragma warning(disable:4996) //disabling warning
 
 /*
-Implement functions text_reader_init and text_reader_read.
-Text reader_init sets the position to zero and stores the pointer in the context.
-Text_reader_read takes context pointer, buffer and buffer size as parameters.
-The function copies characters from the text in context, starting from current position, until a line feed is encountered, end of text is reached or buffer is full.
-If reading stops at a line feed the line feed is copied into string.
-Text_reader_read returns the number of characters copied to buffer.
-When end of text has been reached following reads must return a zero.
+Write a function called count_args.
+Function takes an integer pointer and variable number of other arguments as parameters and returns an integer.
+The variabale arguments are pointers to strings.
+The end of arguments is indicated by a NULL pointer. The function returns the number of strings.
+Function also counts total number of characters in the strings and stores the total through the first parameter.
 */
 
 #include <stdio.h>
@@ -17,48 +15,37 @@ When end of text has been reached following reads must return a zero.
 #include <ctype.h>
 #include <stdbool.h>
 
-typedef struct {
-	const char *text;
-	int position;
-} text_reader_ctx;
-
-
-// implement the following two functions
-void text_reader_init(text_reader_ctx *ctc, const char *str);
-int text_reader_read(text_reader_ctx *ctx, char *buffer, int size);
+int count_args(int *nchars, ...);
 
 int main(int arcg, char **argv)
 {
-	text_reader_ctx ctc;
-	char *string = malloc(256 * sizeof(char));
-	char *string_to_read = malloc(256 * sizeof(char));
-	printf("Enter string to read:\n");
-	fgets(string_to_read, 255, stdin);
-
-	text_reader_init(&ctc, string_to_read);
-	text_reader_read(&ctc, string, 3);
-	printf("Read: %s", string);
+	char string1[] = "Ahh\n";
+	char string2[] = "Why\n";
+	char string3[] = "Noooo\n";
+	char *string4 = NULL;
+	int wha = 0;
+	int strings = 0;
+	strings = count_args(&wha, string1, string2, string3, string4);
+	printf("Strings: %d\nCharacters: %d\n", strings, wha);
 	return 0;
 }
 
-void text_reader_init(text_reader_ctx *ctc, const char *str) {
-	ctc->position = 0;
-	ctc->text = str;
-}
-int text_reader_read(text_reader_ctx *ctx, char *buffer, int size) {
-	int count = 0; //Counts charactes.
-	int text_size = strlen(ctx->text);
-	bool exit = false;
+int count_args(int *nchars, ...) {
+	va_list args_ptr;
+	int scount = 0;
+	char *string = NULL;
+	*nchars = 0;
 
-	while (count < size - 1 && ctx->position < text_size && !exit) {
-		buffer[count] = ctx->text[ctx->position];
-		count++;
-		ctx->position++;
+	va_start(args_ptr, nchars);
 
-		if (buffer[count - 1] == '\n') {
-			exit = true;
+	do {
+		string = (char *) va_arg(args_ptr, char *);
+		if (string != NULL) {
+			scount++;
+			*nchars += strlen(string);
 		}
-	}
-	buffer[count] = '\0';
-	return count;
+	} while (string != NULL);
+	va_end(args_ptr);
+
+	return scount;
 }
