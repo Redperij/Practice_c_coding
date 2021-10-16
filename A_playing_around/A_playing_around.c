@@ -1,13 +1,13 @@
 #pragma warning(disable:4996) //disabling warning
 
 /*
-Implement two functions:
-
-int log(loglevel level, const char *format, ...); works like printf but prints only when level lower than or equal to global variable log_level.
-When printing precedes printouts with "LOG[%s]: " where %s is the parameter level printed as a string.
-
-const char *log_level_to_str(loglevel level); returns a constant string corresponding to the level parameter.
-Note that the string returned may not be a variable that is allocated on the stack.
+Implement functions text_reader_init and text_reader_read.
+Text reader_init sets the position to zero and stores the pointer in the context.
+Text_reader_read takes context pointer, buffer and buffer size as parameters.
+The function copies characters from the text in context, starting from current position, until a line feed is encountered, end of text is reached or buffer is full.
+If reading stops at a line feed the line feed is copied into string.
+Text_reader_read returns the number of characters copied to buffer.
+When end of text has been reached following reads must return a zero.
 */
 
 #include <stdio.h>
@@ -17,48 +17,48 @@ Note that the string returned may not be a variable that is allocated on the sta
 #include <ctype.h>
 #include <stdbool.h>
 
-typedef enum { logCritical, logWarning, logInfo, logVerbose } loglevel;
-// Log levels as strings:  "Critical", "Warning", "Info", "Verbose" 
+typedef struct {
+	const char *text;
+	int position;
+} text_reader_ctx;
 
-const char *log_level_to_str(loglevel level);
-// implement this function
-int log(loglevel level, const char *format, ...);
 
-loglevel log_level = logCritical;
+// implement the following two functions
+void text_reader_init(text_reader_ctx *ctc, const char *str);
+int text_reader_read(text_reader_ctx *ctx, char *buffer, int size);
 
 int main(int arcg, char **argv)
 {
-	log(logCritical, "OH NO\n");
-	log(logInfo, "OH NOx2\n");
-    return 0;
+	text_reader_ctx ctc;
+	char *string = malloc(256 * sizeof(char));
+	char *string_to_read = malloc(256 * sizeof(char));
+	printf("Enter string to read:\n");
+	fgets(string_to_read, 255, stdin);
+
+	text_reader_init(&ctc, string_to_read);
+	text_reader_read(&ctc, string, 3);
+	printf("Read: %s", string);
+	return 0;
 }
 
-const char *log_level_to_str(loglevel level) {
-	switch (level)
-	{
-	case logCritical:
-		return "Critical";
-	case logWarning:
-		return "Warning";
-	case logInfo:
-		return "Info";
-	case logVerbose:
-		return "Verbose";
-	default:
-		return NULL;
-	}
+void text_reader_init(text_reader_ctx *ctc, const char *str) {
+	ctc->position = 0;
+	ctc->text = str;
 }
-int log(loglevel level, const char *format, ...) {
-	va_list argptr; //List with arguments.
-	int cnt = 0; //Count printed characters.
+int text_reader_read(text_reader_ctx *ctx, char *buffer, int size) {
+	int count = 0; //Counts charactes.
+	int text_size = strlen(ctx->text);
+	bool exit = false;
 
-	if (level <= log_level) {
-		va_start(argptr, format);
-		//Printing message.
-		cnt += printf("LOG[%s]: ", log_level_to_str(level));
-		cnt += vprintf(format, argptr);
-		va_end(argptr);
+	while (count < size - 1 && ctx->position < text_size && !exit) {
+		buffer[count] = ctx->text[ctx->position];
+		count++;
+		ctx->position++;
+
+		if (buffer[count - 1] == '\n') {
+			exit = true;
+		}
 	}
-
-	return cnt;
+	buffer[count] = '\0';
+	return count;
 }
