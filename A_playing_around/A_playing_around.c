@@ -1,14 +1,10 @@
 #pragma warning(disable:4996) //disabling warning
 
 /*
-Write a function that shifts bits to right and masks out unwanted bits.
-The first parameter of the function is the number to process, the second parameter is number shifts to right,
-and the last parameter is the number of bits to keep starting from the least significant bit (the rightmost bit).
-The function returns the result of shift-and-mask operation.
-
-To keep certain number of bits you need to create a mask where the bits that you want to keep are set to one and the rest of the bits are set to zero.
-Then perform bitwise and between the value and mask.
-For example to keep four bits from the right the mask is 0xF.
+Implement a function that takes two parameters: a number to print and field width.
+The function prints the number in binary with the specified field width filling the field with leading zeros if necessary.
+If printing requires more space than the field width specifies the number is still printed in full.
+The function must not print any white space before or after the number.
 */
 
 #include <stdio.h>
@@ -19,15 +15,39 @@ For example to keep four bits from the right the mask is 0xF.
 #include <stdbool.h>
 #include <stdint.h>
 
-uint32_t get_bits(uint32_t value, uint32_t shift, uint32_t bits);
+
+void print_binaryw(uint32_t value, uint32_t width);
 
 int main(int arcg, char **argv)
 {
-	printf("get_bits(0X7E3, 4, 6) --> %x", get_bits(0X7E3, 4, 6));
+	print_binaryw(5, 4);
+	printf("\n");
+	print_binaryw(0x2A, 6);
+	printf("\n");
+	print_binaryw(5, 0);
+	printf("\n");
+	print_binaryw(0xCAFEBEEF, 0);
 	return 0;
 }
 
-uint32_t get_bits(uint32_t value, uint32_t shift, uint32_t bits) {
-	value >>= shift;
-	return value & (0xFFFFFFFF >> (32 - bits)); // 0xFFFFFFFF - 32 bits '1' are shifted right until 'bits' number of '1' bits left -> it is needed mask.
+void print_binaryw(uint32_t value, uint32_t width) {
+	uint32_t required_field = 0;
+	char *string;
+	//Getting correct field width.
+	for (uint32_t i = value; i > 0; i /= 2) required_field++;
+	if (required_field > width) width = required_field;
+	//Allocating memory for string of 01's
+	string = malloc((width + 1) * sizeof(char));
+	if (string == NULL) return;
+
+	string[width] = '\0';
+	while (width > 0) {
+		if (value % 2 == 1) string[width - 1] = '1';
+		else string[width - 1] = '0';
+		value >>= 1;
+		width--;
+	}
+	printf("%s", string);
+	free(string);
+	string = NULL;
 }
