@@ -1,11 +1,14 @@
 #pragma warning(disable:4996) //disabling warning
 
 /*
-Write a function called count_args.
-Function takes an integer pointer and variable number of other arguments as parameters and returns an integer.
-The variabale arguments are pointers to strings.
-The end of arguments is indicated by a NULL pointer. The function returns the number of strings.
-Function also counts total number of characters in the strings and stores the total through the first parameter.
+Write a function that shifts bits to right and masks out unwanted bits.
+The first parameter of the function is the number to process, the second parameter is number shifts to right,
+and the last parameter is the number of bits to keep starting from the least significant bit (the rightmost bit).
+The function returns the result of shift-and-mask operation.
+
+To keep certain number of bits you need to create a mask where the bits that you want to keep are set to one and the rest of the bits are set to zero.
+Then perform bitwise and between the value and mask.
+For example to keep four bits from the right the mask is 0xF.
 */
 
 #include <stdio.h>
@@ -14,38 +17,17 @@ Function also counts total number of characters in the strings and stores the to
 #include <stdarg.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdint.h>
 
-int count_args(int *nchars, ...);
+uint32_t get_bits(uint32_t value, uint32_t shift, uint32_t bits);
 
 int main(int arcg, char **argv)
 {
-	char string1[] = "Ahh\n";
-	char string2[] = "Why\n";
-	char string3[] = "Noooo\n";
-	char *string4 = NULL;
-	int wha = 0;
-	int strings = 0;
-	strings = count_args(&wha, string1, string2, string3, string4);
-	printf("Strings: %d\nCharacters: %d\n", strings, wha);
+	printf("get_bits(0X7E3, 4, 6) --> %x", get_bits(0X7E3, 4, 6));
 	return 0;
 }
 
-int count_args(int *nchars, ...) {
-	va_list args_ptr;
-	int scount = 0;
-	char *string = NULL;
-	*nchars = 0;
-
-	va_start(args_ptr, nchars);
-
-	do {
-		string = (char *) va_arg(args_ptr, char *);
-		if (string != NULL) {
-			scount++;
-			*nchars += strlen(string);
-		}
-	} while (string != NULL);
-	va_end(args_ptr);
-
-	return scount;
+uint32_t get_bits(uint32_t value, uint32_t shift, uint32_t bits) {
+	value >>= shift;
+	return value & (0xFFFFFFFF >> (32 - bits)); // 0xFFFFFFFF - 32 bits '1' are shifted right until 'bits' number of '1' bits left -> it is needed mask.
 }
