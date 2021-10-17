@@ -1,10 +1,12 @@
 #pragma warning(disable:4996) //disabling warning
 
 /*
-Implement a function that takes two parameters: a number to print and field width.
-The function prints the number in binary with the specified field width filling the field with leading zeros if necessary.
-If printing requires more space than the field width specifies the number is still printed in full.
-The function must not print any white space before or after the number.
+Write a function that prints given string in Morse code. Use the provided table of symbols.
+The table contains structures with symbols and their corresponding morse codes.
+Any white space is printed as two line feeds all other character are printed with morse codes from the table.
+Morse code is case insensitive (same code for upper and lower case letters).
+Replace characters that don�t have a Morse code with �X�.
+When you print a morse code from the table print four spaces after the code to make the output more readable.
 */
 
 #include <stdio.h>
@@ -15,39 +17,87 @@ The function must not print any white space before or after the number.
 #include <stdbool.h>
 #include <stdint.h>
 
+#define DOT '.'
+#define DASH '-'
 
-void print_binaryw(uint32_t value, uint32_t width);
+typedef struct MorseCode_ {
+	char symbol;
+	char code[7];
+} MorseCode;
+
+const MorseCode ITU_morse[] = {
+{ 'A',{ DOT, DASH } }, // A
+{ 'B',{ DASH, DOT, DOT, DOT } }, // B
+{ 'C',{ DASH, DOT, DASH, DOT } }, // C
+{ 'D',{ DASH, DOT, DOT } }, // D
+{ 'E',{ DOT } }, // E
+{ 'F',{ DOT, DOT, DASH, DOT } }, // F
+{ 'G',{ DASH, DASH, DOT } }, // G
+{ 'H',{ DOT, DOT, DOT, DOT } }, // H
+{ 'I',{ DOT, DOT } }, // I
+{ 'J',{ DOT, DASH, DASH, DASH } }, // J
+{ 'K',{ DASH, DOT, DASH } }, // K
+{ 'L',{ DOT, DASH, DOT, DOT } }, // L
+{ 'M',{ DASH, DASH } }, // M
+{ 'N',{ DASH, DOT } }, // N
+{ 'O',{ DASH, DASH, DASH } }, // O
+{ 'P',{ DOT, DASH, DASH, DOT } }, // P
+{ 'Q',{ DASH, DASH, DOT, DASH } }, // Q
+{ 'R',{ DOT, DASH, DOT } }, // R
+{ 'S',{ DOT, DOT, DOT } }, // S
+{ 'T',{ DASH } }, // T
+{ 'U',{ DOT, DOT, DASH } }, // U
+{ 'V',{ DOT, DOT, DOT, DASH } }, // V
+{ 'W',{ DOT, DASH, DASH } }, // W
+{ 'X',{ DASH, DOT, DOT, DASH } }, // X
+{ 'Y',{ DASH, DOT, DASH, DASH } }, // Y
+{ 'Z',{ DASH, DASH, DOT, DOT } }, // Z
+{ '1',{ DOT, DASH, DASH, DASH, DASH } }, // 1
+{ '2',{ DOT, DOT, DASH, DASH, DASH } }, // 2
+{ '3',{ DOT, DOT, DOT, DASH, DASH } }, // 3
+{ '4',{ DOT, DOT, DOT, DOT, DASH } }, // 4
+{ '5',{ DOT, DOT, DOT, DOT, DOT } }, // 5
+{ '6',{ DASH, DOT, DOT, DOT, DOT } }, // 6
+{ '7',{ DASH, DASH, DOT, DOT, DOT } }, // 7
+{ '8',{ DASH, DASH, DASH, DOT, DOT } }, // 8
+{ '9',{ DASH, DASH, DASH, DASH, DOT } }, // 9
+{ '0',{ DASH, DASH, DASH, DASH, DASH } }, // 0
+{ 0,{ 0 } } // terminating entry - Do not remove!
+};
+
+void print_morse(const char *str);
 
 int main(int arcg, char **argv)
 {
-	print_binaryw(5, 4);
-	printf("\n");
-	print_binaryw(0x2A, 6);
-	printf("\n");
-	print_binaryw(5, 0);
-	printf("\n");
-	print_binaryw(0xCAFEBEEF, 0);
+	print_morse("SxIT");
 	return 0;
 }
 
-void print_binaryw(uint32_t value, uint32_t width) {
-	uint32_t required_field = 0;
-	char *string;
-	//Getting correct field width.
-	for (uint32_t i = value; i > 0; i /= 2) required_field++;
-	if (required_field > width) width = required_field;
-	//Allocating memory for string of 01's
-	string = malloc((width + 1) * sizeof(char));
-	if (string == NULL) return;
+void print_morse(const char *str) {
+	if (str == NULL) return;
+	bool found;
+	int q;
+	for (size_t i = 0; i < strlen(str); i++) {
+		if (isspace(str[i])) {
+			printf("\n\n");
+		}
+		else {
+			q = 0;
+			found = false;
+			while (!found && ITU_morse[q].symbol != 0) {
+				if ((islower(str[i])? toupper(str[i]) : str[i]) == ITU_morse[q].symbol) {
+					found = true;
+					q--;
+				}
+				q++;
+			}
 
-	string[width] = '\0';
-	while (width > 0) {
-		if (value % 2 == 1) string[width - 1] = '1';
-		else string[width - 1] = '0';
-		value >>= 1;
-		width--;
+			if (found) {
+				printf("%s    ", ITU_morse[q].code);
+			}
+			else {
+				printf("-..-    ");
+			}
+		}
 	}
-	printf("%s", string);
-	free(string);
-	string = NULL;
 }
