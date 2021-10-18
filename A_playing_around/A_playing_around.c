@@ -1,13 +1,28 @@
 #pragma warning(disable:4996) //disabling warning
 
 /*
-Write a function that prints given string in Morse code. Use the provided table of symbols.
-The table contains structures with symbols and their corresponding morse codes.
-Any white space is printed as two line feeds all other character are printed with morse codes from the table.
-Morse code is case insensitive (same code for upper and lower case letters).
-Replace characters that don�t have a Morse code with �X�.
-When you print a morse code from the table print four spaces after the code to make the output more readable.
+You need to write two functions:
+
+Function called //register_slip_frame_callback that takes one parameter:
+pointer to a function that takes a const unsigned char pointer and an integer as parameters and returns no value.
+register_slip_frame_callback does not return a value.
+The function stores the callback function pointer to a global variable.
+
+Function called process_slip_data that takes one parameter:
+pointer to a function that does not take any parameters and returns an integer.
+Process_slip_data does not return a value.
+
+Process_slip_data uses the function given as parameter to read bytes that carry SLIP framed data.
+The function reads and decodes data until the reader function return EOF to indicate end of input.
+The data that reader function returns contains SLIP framed data where the maximum data length is 40 bytes.
+Note that because of escaping the number of received bytes before frame is completetely received can be much longer (82 bytes in the worst case before decoding).
+The length of decoded data never exceed 40 bytes. When a frame is completely received (SLIP_END received) then data is passed to the callback function for processing.
+If two SLIP_ENDs are received with no data between them the callback function is not called because there is no data to process.
+
+The test bench first registers a callback function and then calls process_slip_data. Both callback function and reader function are implemented in the test bench.
 */
+
+//NON-TASK
 
 #include <stdio.h>
 #include <string.h>
@@ -17,87 +32,46 @@ When you print a morse code from the table print four spaces after the code to m
 #include <stdbool.h>
 #include <stdint.h>
 
-#define DOT '.'
-#define DASH '-'
+#define SLIP_END 0xC0
+#define SLIP_ESC 0xDB
+#define SLIP_ESC_END 0xDC
+#define SLIP_ESC_ESC 0xDD
 
-typedef struct MorseCode_ {
-	char symbol;
-	char code[7];
-} MorseCode;
+int read_byte = -1;
 
-const MorseCode ITU_morse[] = {
-{ 'A',{ DOT, DASH } }, // A
-{ 'B',{ DASH, DOT, DOT, DOT } }, // B
-{ 'C',{ DASH, DOT, DASH, DOT } }, // C
-{ 'D',{ DASH, DOT, DOT } }, // D
-{ 'E',{ DOT } }, // E
-{ 'F',{ DOT, DOT, DASH, DOT } }, // F
-{ 'G',{ DASH, DASH, DOT } }, // G
-{ 'H',{ DOT, DOT, DOT, DOT } }, // H
-{ 'I',{ DOT, DOT } }, // I
-{ 'J',{ DOT, DASH, DASH, DASH } }, // J
-{ 'K',{ DASH, DOT, DASH } }, // K
-{ 'L',{ DOT, DASH, DOT, DOT } }, // L
-{ 'M',{ DASH, DASH } }, // M
-{ 'N',{ DASH, DOT } }, // N
-{ 'O',{ DASH, DASH, DASH } }, // O
-{ 'P',{ DOT, DASH, DASH, DOT } }, // P
-{ 'Q',{ DASH, DASH, DOT, DASH } }, // Q
-{ 'R',{ DOT, DASH, DOT } }, // R
-{ 'S',{ DOT, DOT, DOT } }, // S
-{ 'T',{ DASH } }, // T
-{ 'U',{ DOT, DOT, DASH } }, // U
-{ 'V',{ DOT, DOT, DOT, DASH } }, // V
-{ 'W',{ DOT, DASH, DASH } }, // W
-{ 'X',{ DASH, DOT, DOT, DASH } }, // X
-{ 'Y',{ DASH, DOT, DASH, DASH } }, // Y
-{ 'Z',{ DASH, DASH, DOT, DOT } }, // Z
-{ '1',{ DOT, DASH, DASH, DASH, DASH } }, // 1
-{ '2',{ DOT, DOT, DASH, DASH, DASH } }, // 2
-{ '3',{ DOT, DOT, DOT, DASH, DASH } }, // 3
-{ '4',{ DOT, DOT, DOT, DOT, DASH } }, // 4
-{ '5',{ DOT, DOT, DOT, DOT, DOT } }, // 5
-{ '6',{ DASH, DOT, DOT, DOT, DOT } }, // 6
-{ '7',{ DASH, DASH, DOT, DOT, DOT } }, // 7
-{ '8',{ DASH, DASH, DASH, DOT, DOT } }, // 8
-{ '9',{ DASH, DASH, DASH, DASH, DOT } }, // 9
-{ '0',{ DASH, DASH, DASH, DASH, DASH } }, // 0
-{ 0,{ 0 } } // terminating entry - Do not remove!
-};
+int bytes[] = { 0xC0, 0x01, 0xDD, 0xDB, 0x49, 0xDC, 0xDB, 0x15, 0xC0 };
 
-void print_morse(const char *str);
+int read_bytes();
+
+void callback(unsigned char *ip_frame, int size);
+
+void register_slip_frame_callback(void (*callback_func)(unsigned char *, int));
+
+void process_slip_data(int (*read_bytes)());
 
 int main(int arcg, char **argv)
 {
-	print_morse("SxIT");
+	
 	return 0;
 }
 
-void print_morse(const char *str) {
-	if (str == NULL) return;
-	bool found;
-	int q;
-	for (size_t i = 0; i < strlen(str); i++) {
-		if (isspace(str[i])) {
-			printf("\n\n");
-		}
-		else {
-			q = 0;
-			found = false;
-			while (!found && ITU_morse[q].symbol != 0) {
-				if ((islower(str[i])? toupper(str[i]) : str[i]) == ITU_morse[q].symbol) {
-					found = true;
-					q--;
-				}
-				q++;
-			}
+//TASK
 
-			if (found) {
-				printf("%s    ", ITU_morse[q].code);
-			}
-			else {
-				printf("-..-    ");
-			}
-		}
-	}
+void register_slip_frame_callback(void (*callback_func)(unsigned char *, int)) {
+
+}
+
+void process_slip_data(int (*read_bytes)()) {
+
+}
+
+//NON-TASK
+
+int read_bytes() {
+	read_byte++;
+	return bytes[read_byte];
+}
+
+void callback(unsigned char *ip_frame, int size) {
+	return;
 }
